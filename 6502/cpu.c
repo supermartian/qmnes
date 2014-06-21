@@ -28,6 +28,7 @@ uint16_t addr_rela(struct cpu_6502 *p)
     uint16_t ret = mem_read(p, p->rPC);
     ret += p->rPC;
     p->rPC++;
+    page_boundary_chk(p, ret);
     return ret;
 }
 
@@ -62,7 +63,9 @@ uint16_t addr_aix(struct cpu_6502 *p)
     p->rPC++;
     ret |= mem_read(p, p->rPC) << 8;
     p->rPC++;
-    return ret + p->rX;
+    ret += p->rX;
+    page_boundary_chk(p, ret);
+    return ret;
 }
 
 /*
@@ -74,7 +77,9 @@ uint16_t addr_aiy(struct cpu_6502 *p)
     p->rPC++;
     ret |= mem_read(p, p->rPC) << 8;
     p->rPC++;
-    return ret + p->rY;
+    ret += p->rY;
+    page_boundary_chk(p, ret);
+    return ret;
 }
 
 /*
@@ -118,6 +123,7 @@ uint16_t addr_iidir(struct cpu_6502 *p)
     p->rPC++;
     ret = mem_read(p, ret) | (mem_read(p, ret + 1) << 8);
     ret += p->rY;
+    page_boundary_chk(p, ret);
     return ret;
 }
 
@@ -141,7 +147,6 @@ uint16_t addr_absidir(struct cpu_6502 *p)
 void cpu_init(struct cpu_6502 *p, float cpu_freq)
 {
     memset(p, 0, sizeof(struct cpu_6502));
-    p->cycle_time = 1000000000 / cpu_freq; // In nanoseconds
     clock_gettime(CLOCK_REALTIME, &(p->last_tick));
     p->cycle = 0;
 }

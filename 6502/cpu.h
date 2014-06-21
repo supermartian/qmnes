@@ -51,8 +51,18 @@
 #define CPU_FREQ_PAL  1773447.4
 
 /*
+ * Deal with page boundary crossing.
+ * */
+inline void page_boundary_chk(struct cpu_6502 *p, uint16_t addr)
+{
+    if ((p->rPC >> 8) != (addr >> 8)) {
+        p->cycle++;
+    }
+}
+
+/*
  * Deal with memory mirroring.
- */
+ * */
 inline uint16_t mem_addr(uint16_t addr)
 {
     if (addr < 0x2000) {
@@ -66,7 +76,7 @@ inline uint16_t mem_addr(uint16_t addr)
 
 /*
  * General memory reading.
- */
+ * */
 inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t addr_ = mem_addr(addr);
@@ -74,7 +84,7 @@ inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
 
 /*
  * General memory writing.
- */
+ * */
 inline uint8_t mem_write(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t addr_ = mem_addr(addr);
@@ -98,7 +108,6 @@ struct cpu_6502 {
     uint8_t rX;
     uint8_t rY;
 
-    uint32_t cycle_time;
     uint32_t cycle;
     struct timespec last_tick;
 };
