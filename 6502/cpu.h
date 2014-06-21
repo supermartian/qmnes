@@ -34,7 +34,7 @@
  * $FFFC–$FFFD 2 bytes Address of Power on reset handler routine
  * $FFFE–$FFFF 2 bytes Address of Break (BRK instruction) handler routine
  *
- */
+ * */
 
 #define ZERO_START  0x0000
 #define STACK_START 0x0100
@@ -51,23 +51,7 @@
 #define CPU_FREQ_PAL  1773447.4
 
 /*
- * Addressing Model marcos
- */
-#define RELT_ADDR(cpu, op) (cpu->rPC + op)
-#define ABS_ADDR(cpu, op1, op2) ((op2 << 8) | op1)
-#define ZP_ADDR(cpu, op) op
-#define AIX_ADDR(cpu, op1, op2) (((op2 << 8) | op1) + cpu->rX)
-#define AIY_ADDR(cpu, op1, op2) (((op2 << 8) | op1) + cpu->rY)
-#define ZPIX_ADDR(cpu, op) (op + cpu->rX)
-#define ZPIY_ADDR(cpu, op) (op + cpu->rY)
-#define IDIRI_ADDR(cpu, op) ((cpu->mem[op + cpu->rX]) | ((cpu->mem[op + cpu->rX + 1]) << 8))
-#define IIDIR_ADDR(cpu, op) ((cpu->mem[op] | (cpu->mem[op + 1]) << 8) + cpu->rY)
-#define ABSIDIR_ADDR(cpu, op1, op2) cpu->mem[((op2 << 8) | op1)] \
-    | (cpu->mem[((op2 << 8) | op1) + 1] << 8)
-
-/*
- * Deal with the memory mirroring.
- *
+ * Deal with memory mirroring.
  */
 inline uint16_t mem_addr(uint16_t addr)
 {
@@ -80,18 +64,33 @@ inline uint16_t mem_addr(uint16_t addr)
     }
 }
 
+/*
+ * General memory reading.
+ */
+inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
+{
+    uint16_t addr_ = mem_addr(addr);
+}
+
+/*
+ * General memory writing.
+ */
+inline uint8_t mem_write(struct cpu_6502 *p, uint16_t addr)
+{
+    uint16_t addr_ = mem_addr(addr);
+}
 
 struct cpu_6502 {
-    uint8_t mem[0xffff];
+    uint8_t ram[0x0800];
     uint16_t rPC;
     uint8_t rS;
     struct rP {
         uint8_t N:1,
                 V:1,
                 unused:1,
-                b:1,
-                d:1,
-                i:1,
+                B:1,
+                D:1,
+                I:1,
                 Z:1,
                 C:1;
     };
@@ -99,12 +98,13 @@ struct cpu_6502 {
     uint8_t rX;
     uint8_t rY;
 
+    uint32_t cycle_time;
     uint32_t cycle;
     struct timespec last_tick;
 };
 
 void cpu_init(struct cpu_6502 *p, float cpu_freq);
-void cpu_cycle_tick(struct cpu_6502 *p, int cycles);
+void cpu_run(struct cpu_6502 *p);
 
 #endif /* !__CPU_H__ */
 
