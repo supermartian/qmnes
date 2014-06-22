@@ -50,6 +50,28 @@
 #define CPU_FREQ_NTSC 1789772.5
 #define CPU_FREQ_PAL  1773447.4
 
+struct cpu_6502 {
+    uint8_t ram[0x0800];
+    uint16_t rPC;
+    uint8_t rS;
+    struct rP {
+        uint8_t N:1,
+                V:1,
+                unused:1,
+                B:1,
+                D:1,
+                I:1,
+                Z:1,
+                C:1;
+    };
+    uint8_t rA;
+    uint8_t rX;
+    uint8_t rY;
+
+    uint32_t cycle;
+    struct timespec last_tick;
+};
+
 /*
  * Deal with page boundary crossing.
  * */
@@ -80,6 +102,7 @@ inline uint16_t mem_addr(uint16_t addr)
 inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t addr_ = mem_addr(addr);
+    return 0;
 }
 
 /*
@@ -88,31 +111,23 @@ inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
 inline uint8_t mem_write(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t addr_ = mem_addr(addr);
+    return 0;
 }
 
-struct cpu_6502 {
-    uint8_t ram[0x0800];
-    uint16_t rPC;
-    uint8_t rS;
-    struct rP {
-        uint8_t N:1,
-                V:1,
-                unused:1,
-                B:1,
-                D:1,
-                I:1,
-                Z:1,
-                C:1;
-    };
-    uint8_t rA;
-    uint8_t rX;
-    uint8_t rY;
-
-    uint32_t cycle;
-    struct timespec last_tick;
-};
+uint16_t addr_imm8(struct cpu_6502 *p);
+uint16_t addr_rela(struct cpu_6502 *p);
+uint16_t addr_abs(struct cpu_6502 *p);
+uint16_t addr_zp(struct cpu_6502 *p);
+uint16_t addr_aix(struct cpu_6502 *p);
+uint16_t addr_aiy(struct cpu_6502 *p);
+uint16_t addr_zpix(struct cpu_6502 *p);
+uint16_t addr_zpiy(struct cpu_6502 *p);
+uint16_t addr_idiri(struct cpu_6502 *p);
+uint16_t addr_iidir(struct cpu_6502 *p);
+uint16_t addr_absidir(struct cpu_6502 *p);
 
 void cpu_init(struct cpu_6502 *p, float cpu_freq);
+void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode);
 void cpu_run(struct cpu_6502 *p);
 
 #endif /* !__CPU_H__ */
