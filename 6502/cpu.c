@@ -30,7 +30,8 @@ uint16_t addr_rela(struct cpu_6502 *p)
     uint16_t ret = mem_read(p, p->rPC);
     ret += p->rPC;
     p->rPC++;
-    page_boundary_chk(p, ret);
+    // Relative addressing is only used by branch instructions.
+    // Any page crossing issue will be dealt inside the instruction function.
     return ret;
 }
 
@@ -150,162 +151,58 @@ void cpu_init(struct cpu_6502 *p, float cpu_freq)
 {
     memset(p, 0, sizeof(struct cpu_6502));
     p->cycle = 0;
-}
-
-uint16_t cpu_op_fetch_addr(struct cpu_6502 *p, uint8_t opcode)
-{
-    // JMP is a special babe!
-    // 0X4C Absolute
-    // 0X6C Absolute indirect 
-    if (opcode == 0x4C) {
-        return addr_abs(p);
-    } else if (opcode == 0X6C) {
-        return addr_absidir(p);
-    }
-
-    uint8_t addr_mode = (opcode & 0x1C) >> 2;
-    uint8_t cc = (opcode & 0x03);
-    uint16_t ret;
-    switch (cc) {
-        case 1:
-            switch (addr_mode) {
-                case 0:
-                    ret = addr_iidir(p);
-                    break;
-                case 1:
-                    ret = addr_zp(p);
-                    break;
-                case 2:
-                    ret = addr_imm8(p);
-                    break;
-                case 3:
-                    ret = addr_abs(p);
-                    break;
-                case 4:
-                    ret = addr_idiri(p);
-                    break;
-                case 5:
-                    ret = addr_zpix(p);
-                    break;
-                case 6:
-                    ret = addr_aix(p);
-                    break;
-                case 7:
-                    ret = addr_aiy(p);
-                    break;
-                default:
-                    return 0;
-            }
-            break;
-        case 0:
-        case 2:
-            switch (addr_mode) {
-                case 0:
-                    ret = addr_imm8(p);
-                    break;
-                case 1:
-                    ret = addr_zp(p);
-                    break;
-                case 2:
-                    // Accumulator
-                    break;
-                case 3:
-                    ret = addr_abs(p);
-                    break;
-                case 5:
-                    ret = addr_zpix(p);
-                    break;
-                case 7:
-                    ret = addr_aix(p);
-                    break;
-                default:
-                    return 0;
-            }
-            break;
-        default:
-            return 0;
-    }
-
-    return ret;
+    ins_table_init();
 }
 
 void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode)
 {
-    uint8_t op = opcode & 0xE3;
-    uint8_t cc = (opcode & 0x03);
-
-    uint16_t addr = cpu_op_fetch_addr(p, opcode);
-    switch (op) {
-        // ORA
-        case 0x01:
+    struct ins *i = &(ins_table[opcode]);
+    uint16_t addr = 0;
+    switch (i->addr) {
+        case IMPL_ADDR:
             break;
-        // AND
-        case 0x21:
+        case ACCU_ADDR:
             break;
-        // EOR
-        case 0x41:
+        case RELA_ADDR:
+            addr = addr_rela(p);
             break;
-        // ADC 
-        case 0x61:
+        case IMM8_ADDR:
+            addr = addr_imm8(p);
             break;
-        // STA 
-        case 0x81:
+        case ABSO_ADDR:
+            addr = addr_abs(p);
             break;
-        // LDA 
-        case 0xA1:
+        case ZP_ADDR:
+            addr = addr_zp(p);
             break;
-        // CMP 
-        case 0xC1:
+        case AIX_ADDR:
+            addr = addr_aix(p);
             break;
-        // SBC 
-        case 0xE1:
+        case AIY_ADDR:
+            addr = addr_aiy(p);
             break;
-        // ASL
-        case 0x02:
+        case ZPIX_ADDR:
+            addr = addr_zpix(p);
             break;
-        // ROL
-        case 0x22:
+        case ZPIY_ADDR:
+            addr = addr_zpiy(p);
             break;
-        // LSR
-        case 0x42:
+        case IIDIR_ADDR:
+            addr = addr_iidir(p);
             break;
-        // ROR 
-        case 0x62:
+        case IDIRI_ADDR:
+            addr = addr_idiri(p);
             break;
-        // STX 
-        case 0x82:
+        case ABSI_ADDR:
+            addr = addr_absidir(p);
             break;
-        // LDX 
-        case 0xA2:
-            break;
-        // DEC 
-        case 0xC2:
-            break;
-        // INC 
-        case 0xE2:
-            break;
-        // BIT 
-        case 0x20:
-            break;
-        // JMP 
-        case 0x40:
-            break;
-        // JMP abs 
-        case 0x60:
-            break;
-        // STY 
-        case 0x80:
-            break;
-        // LDY 
-        case 0xA0:
-            break;
-        // CPY 
-        case 0xC0:
-            break;
-        // CPX 
-        case 0xE0:
+        default:
+            addr = 0;
             break;
     }
+
+    i->f(p, addr);
+    p->cycle += i->cycle;
 }
 
 void cpu_run(struct cpu_6502 *p)

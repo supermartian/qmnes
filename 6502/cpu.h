@@ -54,7 +54,7 @@ struct cpu_6502 {
     uint8_t ram[0x0800];
     uint16_t rPC;
     uint8_t rS;
-    struct rP {
+    struct {
         uint8_t N:1,
                 V:1,
                 unused:1,
@@ -63,13 +63,12 @@ struct cpu_6502 {
                 I:1,
                 Z:1,
                 C:1;
-    };
+    } rP;
     uint8_t rA;
     uint8_t rX;
     uint8_t rY;
 
     uint32_t cycle;
-    struct timespec last_tick;
 };
 
 /*
@@ -108,10 +107,41 @@ inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
 /*
  * General memory writing.
  * */
-inline uint8_t mem_write(struct cpu_6502 *p, uint16_t addr)
+inline uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val)
 {
     uint16_t addr_ = mem_addr(addr);
     return 0;
+}
+
+/*
+ * Push a value into stack.
+ * */
+inline void stack_push(struct cpu_6502 *p, uint8_t val)
+{
+    p->ram[p->rS + STACK_START] = val;
+    p->rS--;
+}
+
+/*
+ * Pop a value out of stack.
+ * */
+inline uint8_t stack_pop(struct cpu_6502 *p)
+{
+    uint8_t ret = p->ram[p->rS + STACK_START];
+    p->rS++;
+    return ret;
+}
+
+inline uint8_t read_rp(struct cpu_6502 *p)
+{
+    uint8_t *pt = (uint8_t *)(&(p->rP));
+    return *pt;
+}
+
+inline void write_rp(struct cpu_6502 *p, uint8_t val)
+{
+    uint8_t *pt = (uint8_t *)(&(p->rP));
+    *pt = val;
 }
 
 uint16_t addr_imm8(struct cpu_6502 *p);
@@ -127,6 +157,7 @@ uint16_t addr_iidir(struct cpu_6502 *p);
 uint16_t addr_absidir(struct cpu_6502 *p);
 
 void cpu_init(struct cpu_6502 *p, float cpu_freq);
+uint16_t cpu_op_fetch_addr(struct cpu_6502 *p, uint8_t opcode);
 void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode);
 void cpu_run(struct cpu_6502 *p);
 
