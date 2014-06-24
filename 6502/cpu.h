@@ -69,86 +69,18 @@ struct cpu_6502 {
     uint8_t rY;
 
     uint32_t cycle;
+
+    uint8_t *rom_prg;
 };
 
-/*
- * Deal with page boundary crossing.
- * */
-inline void page_boundary_chk(struct cpu_6502 *p, uint16_t addr)
-{
-    if ((p->rPC >> 8) != (addr >> 8)) {
-        p->cycle++;
-    }
-}
-
-/*
- * Deal with memory mirroring.
- * */
-inline uint16_t mem_addr(uint16_t addr)
-{
-    if (addr < 0x2000) {
-        return addr % 0x0800;
-    } else if (addr >= 0x2000 && addr < 0x4000) {
-        return ((addr - 0x2000) % 0x8) + 0x2000;
-    } else {
-        return addr;
-    }
-}
-
-/*
- * General memory reading.
- * */
-inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
-{
-    uint16_t addr_ = mem_addr(addr);
-    if (addr_ < 0x0800) {
-        return p->ram[addr_];
-    }
-    return 0;
-}
-
-/*
- * General memory writing.
- * */
-inline uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val)
-{
-    uint16_t addr_ = mem_addr(addr);
-    if (addr_ < 0x0800) {
-        p->ram[addr_] = val;
-    }
-    return 0;
-}
-
-/*
- * Push a value into stack.
- * */
-inline void stack_push(struct cpu_6502 *p, uint8_t val)
-{
-    p->ram[p->rS + STACK_START] = val;
-    p->rS--;
-}
-
-/*
- * Pop a value out of stack.
- * */
-inline uint8_t stack_pop(struct cpu_6502 *p)
-{
-    uint8_t ret = p->ram[p->rS + STACK_START];
-    p->rS++;
-    return ret;
-}
-
-inline uint8_t read_rp(struct cpu_6502 *p)
-{
-    uint8_t *pt = (uint8_t *)(&(p->rP));
-    return *pt;
-}
-
-inline void write_rp(struct cpu_6502 *p, uint8_t val)
-{
-    uint8_t *pt = (uint8_t *)(&(p->rP));
-    *pt = val;
-}
+void page_boundary_chk(struct cpu_6502 *p, uint16_t addr);
+uint16_t mem_addr(uint16_t addr);
+uint8_t mem_read(struct cpu_6502 *p, uint16_t addr);
+uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val);
+void stack_push(struct cpu_6502 *p, uint8_t val);
+uint8_t stack_pop(struct cpu_6502 *p);
+uint8_t read_rp(struct cpu_6502 *p);
+void write_rp(struct cpu_6502 *p, uint8_t val);
 
 void cpu_dump(struct cpu_6502 *p);
 
@@ -164,8 +96,8 @@ uint16_t addr_idiri(struct cpu_6502 *p);
 uint16_t addr_iidir(struct cpu_6502 *p);
 uint16_t addr_absidir(struct cpu_6502 *p);
 
-void cpu_setup(struct cpu_6502 *p, float cpu_freq);
-void cpu_init(struct cpu_6502 *p);
+void cpu_setup(struct cpu_6502 *p);
+void cpu_reset(struct cpu_6502 *p);
 uint16_t cpu_op_fetch_addr(struct cpu_6502 *p, uint8_t opcode);
 void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode);
 void cpu_run(struct cpu_6502 *p);

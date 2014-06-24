@@ -119,7 +119,7 @@ void ins_table_init()
     INS_ADD(0xA1, IIDIR_ADDR, lda, 6);
     INS_ADD(0xB1, IDIRI_ADDR, lda, 5);
 
-    INS_ADD(0xA1, IMM8_ADDR, ldx, 2);
+    INS_ADD(0xA2, IMM8_ADDR, ldx, 2);
     INS_ADD(0xA6, ZP_ADDR, ldx, 3);
     INS_ADD(0xB6, ZPIY_ADDR, ldx, 4);
     INS_ADD(0xAE, ABSO_ADDR, ldx, 4);
@@ -198,7 +198,7 @@ void ins_table_init()
     // STX
     INS_ADD(0x86, ZP_ADDR, stx, 3);
     INS_ADD(0x96, ZPIY_ADDR, stx, 4);
-    INS_ADD(0x81, ABSO_ADDR, stx, 4);
+    INS_ADD(0x8E, ABSO_ADDR, stx, 4);
 
     // STY
     INS_ADD(0x84, ZP_ADDR, sty, 3);
@@ -637,7 +637,8 @@ void ins_rts(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t pc;
     pc = stack_pop(p);
-    pc |= ((uint16_t)stack_pop(p)) << 8;
+    pc |= stack_pop(p) << 8;
+    printf("rts %x\n", pc + 1);
     p->rPC = pc + 1;
 }
 

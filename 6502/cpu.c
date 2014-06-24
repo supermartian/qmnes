@@ -147,11 +147,12 @@ uint16_t addr_absidir(struct cpu_6502 *p)
  * Some CPU configuration before power on.
  *
  * */
-void cpu_setup(struct cpu_6502 *p, float cpu_freq)
+void cpu_setup(struct cpu_6502 *p)
 {
     memset(p, 0, sizeof(struct cpu_6502));
     p->cycle = 0;
     ins_table_init();
+    printf("instruction init\n");
 }
 
 /*
@@ -161,7 +162,7 @@ void cpu_setup(struct cpu_6502 *p, float cpu_freq)
 void cpu_reset(struct cpu_6502 *p)
 {
     uint16_t start_addr;
-    memset(p->ram, 0xFF, 0x0800);
+    memset(p->ram, 0xFF, 0x0800 * sizeof(uint8_t));
     p->cycle = 0;
 
     start_addr = mem_read(p, 0xFFFC);
@@ -172,7 +173,7 @@ void cpu_reset(struct cpu_6502 *p)
     p->rA = 0;
     p->rX = 0;
     p->rY = 0;
-    p->rP = 0x20;
+    write_rp(p, 0x20);
 }
 
 void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode)
@@ -230,22 +231,25 @@ void cpu_dump(struct cpu_6502 *p)
 {
     printf("========================================================\n");
     // dump memory
-    int i, j;
-    for (i = 0; i < 32; i++) {
-        for (j = 0; j < 64; j++) {
-            printf("%x ", p->ram[i*j]);
-        }
-        printf("\n");
-    }
+    /*
+     *int i, j;
+     *for (i = 0; i < 64; i++) {
+     *    for (j = 0; j < 32; j++) {
+     *        printf("%x ", p->ram[i*j]);
+     *    }
+     *    printf("\n");
+     *}
+     */
 
     printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 
     // dump registers
-    printf("PC: %x\t", p->rPC);
+    printf("PC: %x - %x\t", p->rPC, mem_read(p, p->rPC));
     printf("SP: %x\t", p->rS);
     printf("A: %x\n", p->rA);
     printf("X: %x\t", p->rX);
     printf("Y: %x\n", p->rY);
+    printf("P: %x\n", read_rp(p));
 
     // current cycle
     printf("In cycle: %d\n", p->cycle);
@@ -259,8 +263,96 @@ void cpu_run(struct cpu_6502 *p)
     uint8_t op2;
     for(;;)
     {
+        cpu_dump(p);
         opcode = mem_read(p, p->rPC);
         p->rPC++;
         cpu_execute_op(p, opcode);
     }
+}
+
+/*
+ * Deal with page boundary crossing.
+ * */
+void page_boundary_chk(struct cpu_6502 *p, uint16_t addr)
+{
+    if ((p->rPC >> 8) != (addr >> 8)) {
+        p->cycle++;
+    }
+}
+
+/*
+ * Deal with memory mirroring.
+ * */
+uint16_t mem_addr(uint16_t addr)
+{
+    if (addr < 0x2000) {
+        return addr % 0x0800;
+    } else if (addr >= 0x2000 && addr < 0x4000) {
+        return ((addr - 0x2000) % 0x8) + 0x2000;
+    } else {
+        return addr;
+    }
+}
+
+/*
+ * General memory reading.
+ * */
+uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
+{
+    uint16_t addr_ = mem_addr(addr);
+    if (addr_ < 0x0800) {
+        printf("Reading ram %x\n", addr_);
+        return p->ram[addr_];
+    } else if (addr_ >= 0x8000) {
+        printf("Reading cartiage %x, %x\n", addr_-0x8000, p->rom_prg[addr_ - 0x8000]);
+        return p->rom_prg[addr_ - 0x8000];
+    }
+    return 0;
+}
+
+/*
+ * General memory writing.
+ * */
+uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val)
+{
+    uint16_t addr_ = mem_addr(addr);
+    if (addr_ < 0x0800) {
+        printf("writing ram %x\n", addr_);
+        p->ram[addr_] = val;
+    } else if (addr_ >= 0x8000) {
+        printf("writing cartiage %x\n", addr_ - 0x8000);
+        //p->rom_prg[addr_ - 0x8000] = val;
+    }
+    return 0;
+}
+
+/*
+ * Push a value into stack.
+ * */
+void stack_push(struct cpu_6502 *p, uint8_t val)
+{
+    p->ram[p->rS + STACK_START] = val;
+    p->rS--;
+}
+
+/*
+ * Pop a value out of stack.
+ * */
+uint8_t stack_pop(struct cpu_6502 *p)
+{
+    uint8_t ret = p->ram[p->rS + STACK_START];
+    p->rS++;
+    return ret;
+}
+
+uint8_t read_rp(struct cpu_6502 *p)
+{
+    uint8_t *pt = (uint8_t *)(&(p->rP));
+    return *pt;
+}
+
+void write_rp(struct cpu_6502 *p, uint8_t val)
+{
+    uint8_t *pt = (uint8_t *)(&(p->rP));
+    *pt = val;
 }
