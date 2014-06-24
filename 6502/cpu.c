@@ -144,14 +144,35 @@ uint16_t addr_absidir(struct cpu_6502 *p)
 }
 
 /*
- * CPU initialization.
+ * Some CPU configuration before power on.
  *
  * */
-void cpu_init(struct cpu_6502 *p, float cpu_freq)
+void cpu_setup(struct cpu_6502 *p, float cpu_freq)
 {
     memset(p, 0, sizeof(struct cpu_6502));
     p->cycle = 0;
     ins_table_init();
+}
+
+/*
+ * RESET the CPU.
+ *
+ * */
+void cpu_reset(struct cpu_6502 *p)
+{
+    uint16_t start_addr;
+    memset(p->ram, 0xFF, 0x0800);
+    p->cycle = 0;
+
+    start_addr = mem_read(p, 0xFFFC);
+    start_addr |= mem_read(p, 0xFFFD) << 8;
+
+    p->rPC = start_addr;
+    p->rS = 0xFD;
+    p->rA = 0;
+    p->rX = 0;
+    p->rY = 0;
+    p->rP = 0x20;
 }
 
 void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode)
@@ -203,6 +224,32 @@ void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode)
 
     i->f(p, addr);
     p->cycle += i->cycle;
+}
+
+void cpu_dump(struct cpu_6502 *p)
+{
+    printf("========================================================\n");
+    // dump memory
+    int i, j;
+    for (i = 0; i < 32; i++) {
+        for (j = 0; j < 64; j++) {
+            printf("%x ", p->ram[i*j]);
+        }
+        printf("\n");
+    }
+
+    printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+
+    // dump registers
+    printf("PC: %x\t", p->rPC);
+    printf("SP: %x\t", p->rS);
+    printf("A: %x\n", p->rA);
+    printf("X: %x\t", p->rX);
+    printf("Y: %x\n", p->rY);
+
+    // current cycle
+    printf("In cycle: %d\n", p->cycle);
+    printf("========================================================\n");
 }
 
 void cpu_run(struct cpu_6502 *p)

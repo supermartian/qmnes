@@ -101,6 +101,9 @@ inline uint16_t mem_addr(uint16_t addr)
 inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t addr_ = mem_addr(addr);
+    if (addr_ < 0x0800) {
+        return p->ram[addr_];
+    }
     return 0;
 }
 
@@ -110,6 +113,9 @@ inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
 inline uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val)
 {
     uint16_t addr_ = mem_addr(addr);
+    if (addr_ < 0x0800) {
+        p->ram[addr_] = val;
+    }
     return 0;
 }
 
@@ -144,6 +150,8 @@ inline void write_rp(struct cpu_6502 *p, uint8_t val)
     *pt = val;
 }
 
+void cpu_dump(struct cpu_6502 *p);
+
 uint16_t addr_imm8(struct cpu_6502 *p);
 uint16_t addr_rela(struct cpu_6502 *p);
 uint16_t addr_abs(struct cpu_6502 *p);
@@ -156,7 +164,8 @@ uint16_t addr_idiri(struct cpu_6502 *p);
 uint16_t addr_iidir(struct cpu_6502 *p);
 uint16_t addr_absidir(struct cpu_6502 *p);
 
-void cpu_init(struct cpu_6502 *p, float cpu_freq);
+void cpu_setup(struct cpu_6502 *p, float cpu_freq);
+void cpu_init(struct cpu_6502 *p);
 uint16_t cpu_op_fetch_addr(struct cpu_6502 *p, uint8_t opcode);
 void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode);
 void cpu_run(struct cpu_6502 *p);
