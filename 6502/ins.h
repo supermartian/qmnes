@@ -32,7 +32,7 @@ struct ins {
     uint8_t addr;
     uint8_t cycle;
 };
-struct ins ins_table[0xFF];
+struct ins ins_table[0x100];
 void ins_table_init();
 
 void ins_adc(struct cpu_6502 *p, uint16_t addr);
@@ -96,4 +96,5 @@ void ins_txa(struct cpu_6502 *p, uint16_t addr);
 void ins_txs(struct cpu_6502 *p, uint16_t addr);
 void ins_tya(struct cpu_6502 *p, uint16_t addr);
 
+void ins_unknown(struct cpu_6502 *p, uint16_t addr);
 #endif /* !__INS_H__ */

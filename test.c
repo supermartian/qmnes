@@ -31,6 +31,7 @@ int main(int argc, char **argv)
     printf("Prog size %x\n", cpu.rom_prg);
     
     cpu_reset(&cpu);
+    cpu.rPC = 0xc000;
     cpu_run(&cpu);
 
     return 0;

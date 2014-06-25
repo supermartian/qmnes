@@ -28,10 +28,11 @@ uint16_t addr_imm8(struct cpu_6502 *p)
 uint16_t addr_rela(struct cpu_6502 *p)
 {
     uint16_t ret = mem_read(p, p->rPC);
-    ret += p->rPC;
     p->rPC++;
+    ret += p->rPC;
     // Relative addressing is only used by branch instructions.
     // Any page crossing issue will be dealt inside the instruction function.
+    printf("rela %x\n", ret);
     return ret;
 }
 
@@ -173,7 +174,12 @@ void cpu_reset(struct cpu_6502 *p)
     p->rA = 0;
     p->rX = 0;
     p->rY = 0;
-    write_rp(p, 0x20);
+
+    write_rp(p, 0x24);
+
+    p->nmi = 0;
+    p->irq = 0;
+    p->rst = 0;
 }
 
 void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode)
@@ -252,7 +258,7 @@ void cpu_dump(struct cpu_6502 *p)
     printf("P: %x\n", read_rp(p));
 
     // current cycle
-    printf("In cycle: %d\n", p->cycle);
+    printf("In cycle: %d\n", p->cycle * 3);
     printf("========================================================\n");
 }
 
@@ -261,7 +267,7 @@ void cpu_run(struct cpu_6502 *p)
     uint8_t opcode;
     uint8_t op1;
     uint8_t op2;
-    for(;;)
+    for (;;)
     {
         cpu_dump(p);
         opcode = mem_read(p, p->rPC);
@@ -301,11 +307,11 @@ uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t addr_ = mem_addr(addr);
     if (addr_ < 0x0800) {
-        printf("Reading ram %x\n", addr_);
+        printf("Reading ram %x %x\n", addr_, p->ram[addr_]);
         return p->ram[addr_];
     } else if (addr_ >= 0x8000) {
-        printf("Reading cartiage %x, %x\n", addr_-0x8000, p->rom_prg[addr_ - 0x8000]);
-        return p->rom_prg[addr_ - 0x8000];
+        printf("Reading cartiage %x, %x\n", addr_-0xC000, p->rom_prg[addr_ - 0xC000]);
+        return p->rom_prg[addr_ - 0xC000];
     }
     return 0;
 }
@@ -317,7 +323,7 @@ uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val)
 {
     uint16_t addr_ = mem_addr(addr);
     if (addr_ < 0x0800) {
-        printf("writing ram %x\n", addr_);
+        printf("writing ram %x %x\n", addr_, val);
         p->ram[addr_] = val;
     } else if (addr_ >= 0x8000) {
         printf("writing cartiage %x\n", addr_ - 0x8000);
@@ -331,7 +337,7 @@ uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val)
  * */
 void stack_push(struct cpu_6502 *p, uint8_t val)
 {
-    p->ram[p->rS + STACK_START] = val;
+    mem_write(p, p->rS + STACK_START, val);
     p->rS--;
 }
 
@@ -340,19 +346,33 @@ void stack_push(struct cpu_6502 *p, uint8_t val)
  * */
 uint8_t stack_pop(struct cpu_6502 *p)
 {
-    uint8_t ret = p->ram[p->rS + STACK_START];
     p->rS++;
-    return ret;
+    uint8_t val = mem_read(p, p->rS + STACK_START);
+    return val;
+}
+
+uint8_t set_rp(struct cpu_6502 *p, uint8_t bit, uint8_t val)
+{
+    if (val == 0) {
+        p->rP &= ~(1 << bit);
+    } else {
+        p->rP |= 1 << bit;
+    }
+}
+
+uint8_t get_rp(struct cpu_6502 *p, uint8_t bit)
+{
+    return (p->rP >> bit) & 0x1;
 }
 
 uint8_t read_rp(struct cpu_6502 *p)
 {
-    uint8_t *pt = (uint8_t *)(&(p->rP));
-    return *pt;
+    p->rP |= 0x20;
+    p->rP &= ~(1 << P_B);
+    return p->rP;
 }
 
 void write_rp(struct cpu_6502 *p, uint8_t val)
 {
-    uint8_t *pt = (uint8_t *)(&(p->rP));
-    *pt = val;
+    p->rP = val;
 }

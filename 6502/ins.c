@@ -10,15 +10,20 @@
 
 void ins_table_init()
 {
+    int i = 0;
+    for (i = 0; i <= 0xff; i++) {
+        INS_ADD(i, IMPL_ADDR, unknown, 0);
+    }
+
     // ADC
     INS_ADD(0x69, IMM8_ADDR, adc, 2);
     INS_ADD(0x65, ZP_ADDR, adc, 3);
     INS_ADD(0x75, ZPIX_ADDR, adc, 4);
-    INS_ADD(0x85, ABSO_ADDR, adc, 4);
-    INS_ADD(0x6D, AIX_ADDR, adc, 4);
-    INS_ADD(0x7D, AIY_ADDR, adc, 4);
-    INS_ADD(0x79, IIDIR_ADDR, adc, 6);
-    INS_ADD(0x61, IDIRI_ADDR, adc, 5);
+    INS_ADD(0x6D, ABSO_ADDR, adc, 4);
+    INS_ADD(0x7D, AIX_ADDR, adc, 4);
+    INS_ADD(0x79, AIY_ADDR, adc, 4);
+    INS_ADD(0x61, IIDIR_ADDR, adc, 6);
+    INS_ADD(0x71, IDIRI_ADDR, adc, 5);
 
     // AND 
     INS_ADD(0x29, IMM8_ADDR, and, 2);
@@ -209,7 +214,7 @@ void ins_table_init()
     INS_ADD(0xA8, IMPL_ADDR, tay, 2);
     INS_ADD(0xBA, IMPL_ADDR, tsx, 2);
     INS_ADD(0x8A, IMPL_ADDR, txa, 2);
-    INS_ADD(0x9A, IMPL_ADDR, tsx, 2);
+    INS_ADD(0x9A, IMPL_ADDR, txs, 2);
     INS_ADD(0x98, IMPL_ADDR, tya, 2);
 }
 
@@ -217,14 +222,14 @@ void ins_adc(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t t;
     uint8_t val = mem_read(p, addr);
-    t = p->rA + val + p->rP.C;
-    p->rP.V = ((p->rA ^ t) >> 7 == 0);
-    p->rP.N = p->rA >> 7;
-    p->rP.Z = (t == 0);
-    if (p->rP.D) {
+    t = p->rA + val + get_rp(p, P_C);
+    set_rp(p, P_V, (p->rA ^ t) >> 7);
+    set_rp(p, P_N, p->rA >> 7);
+    set_rp(p, P_Z, t == 0);
+    if (get_rp(p, P_D)) {
         /* No BCD supported in NES */
     } else {
-        p->rP.C = t > 255 ? 1 : 0;
+        set_rp(p, P_C, t > 255);
     }
 
     p->rA = t & 0xff;
@@ -234,18 +239,19 @@ void ins_and(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     p->rA &= val;
-    p->rP.N = ((p->rA >> 7) == 0);
-    p->rP.Z = (p->rA == 0);
+
+    set_rp(p, P_N, p->rA >> 7);
+    set_rp(p, P_Z, p->rA == 0);
 }
 
 void ins_asla(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t tmp = p->rA;
 
-    p->rP.C = !!(tmp & 0x80);
+    set_rp(p, P_C, tmp >> 7);
     tmp = (tmp << 1) & 0xfe;
-    p->rP.N = !!(tmp & 0x80);
-    p->rP.Z = (tmp == 0);
+    set_rp(p, P_N, tmp >> 7);
+    set_rp(p, P_Z, tmp == 0);
 
     p->rA = tmp;
 }
@@ -254,20 +260,19 @@ void ins_asl(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t tmp = mem_read(p, addr);
 
-    p->rP.C = !!(tmp & 0x80);
+    set_rp(p, P_C, tmp >> 7);
     tmp = (tmp << 1) & 0xfe;
-    p->rP.N = !!(tmp & 0x80);
-    p->rP.Z = (tmp == 0);
+    set_rp(p, P_N, tmp >> 7);
+    set_rp(p, P_Z, tmp == 0);
 
     mem_write(p, addr, tmp);
 }
 
 void ins_bcc(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = mem_read(p, addr);
     uint16_t oldPC = p->rPC;
-    if (p->rP.C == 0) {
-        p->rPC += val;
+    if (!get_rp(p, P_C)) {
+        p->rPC = addr;
         p->cycle++;
         page_boundary_chk(p, oldPC);
     }
@@ -275,10 +280,9 @@ void ins_bcc(struct cpu_6502 *p, uint16_t addr)
 
 void ins_bcs(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = mem_read(p, addr);
     uint16_t oldPC = p->rPC;
-    if (p->rP.C == 1) {
-        p->rPC += val;
+    if (get_rp(p, P_C)) {
+        p->rPC = addr;
         p->cycle++;
         page_boundary_chk(p, oldPC);
     }
@@ -286,10 +290,9 @@ void ins_bcs(struct cpu_6502 *p, uint16_t addr)
 
 void ins_beq(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = mem_read(p, addr);
     uint16_t oldPC = p->rPC;
-    if (p->rP.Z == 1) {
-        p->rPC += val;
+    if (get_rp(p, P_Z)) {
+        p->rPC = addr;
         p->cycle++;
         page_boundary_chk(p, oldPC);
     }
@@ -297,19 +300,17 @@ void ins_beq(struct cpu_6502 *p, uint16_t addr)
 
 void ins_bit(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = mem_read(p, addr);
-    uint8_t t = val & p->rA;
-    p->rP.N = !!(t & 0x80);
-    p->rP.V = !!(t & 0x40);
-    p->rP.Z = (t == 0);
+    uint8_t t = mem_read(p, addr);
+    set_rp(p, P_N, (t >> 7) & 0x01);
+    set_rp(p, P_V, (t >> 6) & 0x01);
+    set_rp(p, P_Z, (t & p->rA) == 0);
 }
 
 void ins_bmi(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = mem_read(p, addr);
     uint16_t oldPC = p->rPC;
-    if (p->rP.N == 1) {
-        p->rPC += val;
+    if (get_rp(p, P_N)) {
+        p->rPC = addr;
         p->cycle++;
         page_boundary_chk(p, oldPC);
     }
@@ -317,10 +318,9 @@ void ins_bmi(struct cpu_6502 *p, uint16_t addr)
 
 void ins_bne(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = mem_read(p, addr);
     uint16_t oldPC = p->rPC;
-    if (p->rP.Z == 0) {
-        p->rPC += val;
+    if (!get_rp(p, P_Z)) {
+        p->rPC = addr;
         p->cycle++;
         page_boundary_chk(p, oldPC);
     }
@@ -328,10 +328,9 @@ void ins_bne(struct cpu_6502 *p, uint16_t addr)
 
 void ins_bpl(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = mem_read(p, addr);
     uint16_t oldPC = p->rPC;
-    if (p->rP.N == 0) {
-        p->rPC += val;
+    if (!get_rp(p, P_N)) {
+        p->rPC = addr;
         p->cycle++;
         page_boundary_chk(p, oldPC);
     }
@@ -339,19 +338,23 @@ void ins_bpl(struct cpu_6502 *p, uint16_t addr)
 
 void ins_brk(struct cpu_6502 *p, uint16_t addr)
 {
-    p->rPC++;
     stack_push(p, p->rPC >> 8);
     stack_push(p, p->rPC & 0xFF);
     stack_push(p, (read_rp(p) | 0x10));
-    p->rPC = mem_read(p, 0xFFFE) | ((uint16_t)mem_read(p, 0xFFFF) << 8);
+
+    set_rp(p, P_I, 1);
+    if (p->nmi) {
+        p->rPC = mem_read(p, 0xFFFA) | ((uint16_t)mem_read(p, 0xFFFB) << 8);
+    } else {
+        p->rPC = mem_read(p, 0xFFFE) | ((uint16_t)mem_read(p, 0xFFFF) << 8);
+    }
 }
 
 void ins_bvc(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = mem_read(p, addr);
     uint16_t oldPC = p->rPC;
-    if (p->rP.V == 0) {
-        p->rPC += val;
+    if (!get_rp(p, P_V)) {
+        p->rPC = addr;
         p->cycle++;
         page_boundary_chk(p, oldPC);
     }
@@ -359,10 +362,9 @@ void ins_bvc(struct cpu_6502 *p, uint16_t addr)
 
 void ins_bvs(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = mem_read(p, addr);
     uint16_t oldPC = p->rPC;
-    if (p->rP.V == 1) {
-        p->rPC += val;
+    if (get_rp(p, P_V)) {
+        p->rPC = addr;
         p->cycle++;
         page_boundary_chk(p, oldPC);
     }
@@ -370,88 +372,89 @@ void ins_bvs(struct cpu_6502 *p, uint16_t addr)
 
 void ins_clc(struct cpu_6502 *p, uint16_t addr)
 {
-    p->rP.C = 0;
+    set_rp(p, P_C, 0);
 }
 
 void ins_cld(struct cpu_6502 *p, uint16_t addr)
 {
-    p->rP.D = 0;
+    set_rp(p, P_D, 0);
 }
 
 void ins_cli(struct cpu_6502 *p, uint16_t addr)
 {
-    p->rP.I = 0;
+    set_rp(p, P_I, 0);
 }
 
 void ins_clv(struct cpu_6502 *p, uint16_t addr)
 {
-    p->rP.V = 0;
+    set_rp(p, P_V, 0);
 }
 
 void ins_cmp(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     uint8_t t = p->rA - val;
-    p->rP.N = t >> 7;
-    p->rP.C = (p->rA >= val);
-    p->rP.Z = (t == 0);
+    set_rp(p, P_C, t >= 0);
+    set_rp(p, P_N, t >> 7);
+    set_rp(p, P_Z, t == 0);
 }
 
 void ins_cpx(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     uint8_t t = p->rX - val;
-    p->rP.N = t >> 7;
-    p->rP.C = (p->rX >= val);
-    p->rP.Z = (t == 0);
+    set_rp(p, P_N, t >> 7);
+    set_rp(p, P_C, p->rX >= val);
+    set_rp(p, P_Z, t == 0);
 }
 
 void ins_cpy(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     uint8_t t = p->rY - val;
-    p->rP.N = t >> 7;
-    p->rP.C = (p->rY >= val);
-    p->rP.Z = (t == 0);
+    set_rp(p, P_N, t >> 7);
+    set_rp(p, P_C, p->rY >= val);
+    set_rp(p, P_Z, t == 0);
 }
 
 void ins_dec(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     val = (val - 1) & 0xFF;
-    p->rP.N = val >> 7;
-    p->rP.Z = (val == 0);
+
+    set_rp(p, P_N, val >> 7);
+    set_rp(p, P_Z, val == 0);
     mem_write(p, addr, val);
 }
 
 void ins_dex(struct cpu_6502 *p, uint16_t addr)
 {
     p->rX --;
-    p->rP.Z = (p->rX == 0);
-    p->rP.N = p->rX >> 7;
+    set_rp(p, P_Z, p->rX == 0);
+    set_rp(p, P_N, p->rX >> 7);
 }
 
 void ins_dey(struct cpu_6502 *p, uint16_t addr)
 {
     p->rY --;
-    p->rP.Z = (p->rY == 0);
-    p->rP.N = p->rY >> 7;
+    set_rp(p, P_Z, p->rY == 0);
+    set_rp(p, P_N, p->rY >> 7);
 }
 
 void ins_eor(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     p->rA ^= val;
-    p->rP.N = p->rA >> 7;
-    p->rP.Z = (p->rA == 0);
+    set_rp(p, P_Z, p->rA == 0);
+    set_rp(p, P_N, p->rA >> 7);
 }
 
 void ins_inc(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     val = (val + 1) & 0xFF;
-    p->rP.N = val >> 7;
-    p->rP.Z = (val == 0);
+    set_rp(p, P_Z, val == 0);
+    set_rp(p, P_N, val >> 7);
     mem_write(p, addr, val);
 }
 
@@ -459,8 +462,8 @@ void ins_inx(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = p->rX;
     val = (val + 1) & 0xFF;
-    p->rP.N = val >> 7;
-    p->rP.Z = (val == 0);
+    set_rp(p, P_Z, val == 0);
+    set_rp(p, P_N, val >> 7);
     p->rX = val;
 }
 
@@ -468,8 +471,8 @@ void ins_iny(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = p->rY;
     val = (val + 1) & 0xFF;
-    p->rP.N = val >> 7;
-    p->rP.Z = (val == 0);
+    set_rp(p, P_Z, val == 0);
+    set_rp(p, P_N, val >> 7);
     p->rY = val;
 }
 
@@ -490,33 +493,35 @@ void ins_lda(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     p->rA = val;
-    p->rP.N = val >> 7;
-    p->rP.Z = (val == 0);
+    set_rp(p, P_Z, val == 0);
+    set_rp(p, P_N, val >> 7);
 }
 
 void ins_ldx(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = p->rX;
-    p->rA = val;
-    p->rP.N = val >> 7;
-    p->rP.Z = (val == 0);
+    uint8_t val = mem_read(p, addr);
+    p->rX = val;
+    set_rp(p, P_Z, val == 0);
+    set_rp(p, P_N, val >> 7);
 }
 
 void ins_ldy(struct cpu_6502 *p, uint16_t addr)
 {
-    uint8_t val = p->rY;
-    p->rA = val;
-    p->rP.N = val >> 7;
-    p->rP.Z = (val == 0);
+    uint8_t val = mem_read(p, addr);
+    p->rY = val;
+    set_rp(p, P_Z, val == 0);
+    set_rp(p, P_N, val >> 7);
 }
 
 void ins_lsra(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t tmp = p->rA;
 
-    p->rP.C = tmp & 0x01;
+    set_rp(p, P_C, tmp & 0x01);
     tmp = (tmp >> 1) & 0x7F;
-    p->rP.Z = (tmp == 0);
+    set_rp(p, P_Z, tmp == 0);
+    set_rp(p, P_N, tmp >> 7);
+
     p->rA = tmp;
 }
 
@@ -524,9 +529,10 @@ void ins_lsr(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t tmp = mem_read(p, addr);
 
-    p->rP.C = tmp & 0x01;
+    set_rp(p, P_C, tmp & 0x01);
     tmp = (tmp >> 1) & 0x7F;
-    p->rP.Z = (tmp == 0);
+    set_rp(p, P_Z, tmp == 0);
+    set_rp(p, P_N, tmp >> 7);
 
     mem_write(p, addr, tmp);
 }
@@ -540,8 +546,8 @@ void ins_ora(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     p->rA |= val;
-    p->rP.N = ((p->rA >> 7) == 0);
-    p->rP.Z = (p->rA == 0);
+    set_rp(p, P_N, p->rA >> 7);
+    set_rp(p, P_Z, p->rA == 0);
 }
 
 void ins_pha(struct cpu_6502 *p, uint16_t addr)
@@ -551,21 +557,22 @@ void ins_pha(struct cpu_6502 *p, uint16_t addr)
 
 void ins_php(struct cpu_6502 *p, uint16_t addr)
 {
-    stack_push(p, read_rp(p));
+    stack_push(p, read_rp(p) | 0x10);
 }
 
 void ins_pla(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = stack_pop(p);
     p->rA = val;
-    p->rP.N = ((val >> 7) == 0);
-    p->rP.Z = (val == 0);
+    set_rp(p, P_N, val >> 7);
+    set_rp(p, P_Z, val == 0);
 }
 
 void ins_plp(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = stack_pop(p);
     write_rp(p, val);
+    set_rp(p, P_B, 1);
 }
 
 void ins_rola(struct cpu_6502 *p, uint16_t addr)
@@ -574,10 +581,10 @@ void ins_rola(struct cpu_6502 *p, uint16_t addr)
 
     uint8_t t = (val >> 7);
     val = (val << 1) & 0xFE;
-    val |= p->rP.C;
-    p->rP.C = t;
-    p->rP.Z = (val == 0);
-    p->rP.N = (val >> 7);
+    val |= get_rp(p, P_C);
+    set_rp(p, P_C, t);
+    set_rp(p, P_N, val >> 7);
+    set_rp(p, P_Z, val == 0);
 
     p->rA = val;
 }
@@ -588,10 +595,10 @@ void ins_rol(struct cpu_6502 *p, uint16_t addr)
 
     uint8_t t = (val >> 7);
     val = (val << 1) & 0xFE;
-    val |= p->rP.C;
-    p->rP.C = t;
-    p->rP.Z = (val == 0);
-    p->rP.N = (val >> 7);
+    val |= get_rp(p, P_C);
+    set_rp(p, P_C, t);
+    set_rp(p, P_N, val >> 7);
+    set_rp(p, P_Z, val == 0);
 
     mem_write(p, addr, val);
 }
@@ -602,10 +609,10 @@ void ins_rora(struct cpu_6502 *p, uint16_t addr)
 
     uint8_t t = (val & 0x01);
     val = (val >> 1) & 0x7F;
-    val |= (p->rP.C) ? 0x80 : 0x00;
-    p->rP.C = t;
-    p->rP.Z = (val == 0);
-    p->rP.N = (val >> 7);
+    val |= get_rp(p, P_C) ? 0x80 : 0x00;
+    set_rp(p, P_C, t);
+    set_rp(p, P_N, val >> 7);
+    set_rp(p, P_Z, val == 0);
 
     p->rA = val;
 }
@@ -616,10 +623,10 @@ void ins_ror(struct cpu_6502 *p, uint16_t addr)
 
     uint8_t t = (val & 0x01);
     val = (val >> 1) & 0x7F;
-    val |= (p->rP.C) ? 0x80 : 0x00;
-    p->rP.C = t;
-    p->rP.Z = (val == 0);
-    p->rP.N = (val >> 7);
+    val |= get_rp(p, P_C) ? 0x80 : 0x00;
+    set_rp(p, P_C, t);
+    set_rp(p, P_N, val >> 7);
+    set_rp(p, P_Z, val == 0);
 
     mem_write(p, addr, val);
 }
@@ -627,9 +634,9 @@ void ins_ror(struct cpu_6502 *p, uint16_t addr)
 void ins_rti(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t pc;
-    write_rp(p, stack_pop(p));
+    write_rp(p, stack_pop(p) | 0x10);
     pc = stack_pop(p);
-    pc |= ((uint16_t)stack_pop(p)) << 8;
+    pc |= (stack_pop(p)) << 8;
     p->rPC = pc;
 }
 
@@ -647,32 +654,33 @@ void ins_sbc(struct cpu_6502 *p, uint16_t addr)
     uint8_t val = mem_read(p, addr);
     uint8_t t;
 
-    if (p->rP.D) {
+    if (get_rp(p, P_D)) {
         /* No BCD supported in NES */
     } else {
-        t = p->rA - val - !p->rP.C;
-        p->rP.V = (t > 127);
+        t = p->rA - val - !get_rp(p, P_C);
+        set_rp(p, P_V, (t > 127));
     }
 
-    p->rP.C = (t >= 0);
-    p->rP.N = t >> 7;
-    p->rP.Z = (t == 0);
+    set_rp(p, P_C, (t >= 0));
+    set_rp(p, P_N, (t >> 7));
+    set_rp(p, P_Z, (t == 0));
+
     p->rA = t & 0xFF;
 }
 
 void ins_sec(struct cpu_6502 *p, uint16_t addr)
 {
-    p->rP.C = 1;
+    set_rp(p, P_C, 1);
 }
 
 void ins_sed(struct cpu_6502 *p, uint16_t addr)
 {
-    p->rP.D = 1;
+    set_rp(p, P_D, 1);
 }
 
 void ins_sei(struct cpu_6502 *p, uint16_t addr)
 {
-    p->rP.I = 1;
+    set_rp(p, P_I, 1);
 }
 
 void ins_sta(struct cpu_6502 *p, uint16_t addr)
@@ -693,39 +701,45 @@ void ins_sty(struct cpu_6502 *p, uint16_t addr)
 void ins_tax(struct cpu_6502 *p, uint16_t addr)
 {
     p->rX = p->rA;
-    p->rP.N = p->rX >> 7;
-    p->rP.Z = (p->rX == 0);
+    set_rp(p, P_N, p->rX >> 7);
+    set_rp(p, P_Z, p->rX == 0);
 }
 
 void ins_tay(struct cpu_6502 *p, uint16_t addr)
 {
     p->rY = p->rA;
-    p->rP.N = p->rY >> 7;
-    p->rP.Z = (p->rY == 0);
+    set_rp(p, P_N, p->rY >> 7);
+    set_rp(p, P_Z, p->rY == 0);
 }
 
 void ins_tsx(struct cpu_6502 *p, uint16_t addr)
 {
     p->rX = p->rS;
-    p->rP.N = p->rX >> 7;
-    p->rP.Z = (p->rX == 0);
+    set_rp(p, P_N, p->rX >> 7);
+    set_rp(p, P_Z, p->rX == 0);
 }
 
 void ins_txa(struct cpu_6502 *p, uint16_t addr)
 {
     p->rA = p->rX;
-    p->rP.N = p->rA >> 7;
-    p->rP.Z = (p->rA == 0);
+    set_rp(p, P_N, p->rA >> 7);
+    set_rp(p, P_Z, p->rA == 0);
 }
 
 void ins_txs(struct cpu_6502 *p, uint16_t addr)
 {
-    p->rS = p->rA;
+    p->rS = p->rX;
 }
 
 void ins_tya(struct cpu_6502 *p, uint16_t addr)
 {
     p->rA = p->rY;
-    p->rP.N = p->rA >> 7;
-    p->rP.Z = (p->rA == 0);
+    set_rp(p, P_N, p->rA >> 7);
+    set_rp(p, P_Z, p->rA == 0);
+}
+
+void ins_unknown(struct cpu_6502 *p, uint16_t addr)
+{
+    printf("Unknown instruction, emergency out\n");
+    exit(0);
 }

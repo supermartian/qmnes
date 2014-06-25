@@ -50,23 +50,27 @@
 #define CPU_FREQ_NTSC 1789772.5
 #define CPU_FREQ_PAL  1773447.4
 
+#define P_N 7
+#define P_V 6
+#define P_u 5
+#define P_B 4
+#define P_D 3
+#define P_I 2
+#define P_Z 1
+#define P_C 0
+
 struct cpu_6502 {
     uint8_t ram[0x0800];
     uint16_t rPC;
     uint8_t rS;
-    struct {
-        uint8_t N:1,
-                V:1,
-                unused:1,
-                B:1,
-                D:1,
-                I:1,
-                Z:1,
-                C:1;
-    } rP;
+    uint8_t rP;
     uint8_t rA;
     uint8_t rX;
     uint8_t rY;
+
+    uint8_t nmi, prev_nmi;
+    uint8_t irq, prev_irq;
+    uint8_t rst, prev_rst;
 
     uint32_t cycle;
 
@@ -79,6 +83,8 @@ uint8_t mem_read(struct cpu_6502 *p, uint16_t addr);
 uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val);
 void stack_push(struct cpu_6502 *p, uint8_t val);
 uint8_t stack_pop(struct cpu_6502 *p);
+uint8_t set_rp(struct cpu_6502 *p, uint8_t bit, uint8_t val);
+uint8_t get_rp(struct cpu_6502 *p, uint8_t bit);
 uint8_t read_rp(struct cpu_6502 *p);
 void write_rp(struct cpu_6502 *p, uint8_t val);
 
