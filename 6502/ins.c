@@ -219,18 +219,19 @@ void ins_table_init()
 
     // UNDOCUMENTED!
     // http://nesdev.com/undocumented_opcodes.txt
+    // AAX
+    INS_ADD(0x87, ZP_ADDR, aax, 3);
+    INS_ADD(0x97, ZPIY_ADDR, aax, 4);
+    INS_ADD(0x83, IDIRI_ADDR, aax, 6);
+    INS_ADD(0x8f, ABSO_ADDR, aax, 4);
+
 /*
  *
  *    // AAC
  *    INS_ADD(0x0B, IMM8_ADDR, aac, 2);
  *    INS_ADD(0x2B, IMM8_ADDR, aac, 2);
  *
- *    // AAX
- *    INS_ADD(0x87, ZP_ADDR, aax, 3);
- *    INS_ADD(0x97, ZPIY_ADDR, aax, 4);
- *    INS_ADD(0x83, IDIRI_ADDR, aax, 6);
- *    INS_ADD(0x8f, ABSO_ADDR, aax, 4);
- *
+*
  *    // ARR
  *    INS_ADD(0x6B, IMM8_ADDR, arr, 2);
  *
@@ -289,6 +290,14 @@ void ins_table_init()
     INS_ADD(0x7C, AIX_ADDR, nop, 4);
     INS_ADD(0xDC, AIX_ADDR, nop, 4);
     INS_ADD(0xFC, AIX_ADDR, nop, 4);
+
+    // LAX
+    INS_ADD(0xA7, ZP_ADDR, lax, 3);
+    INS_ADD(0xB7, ZPIY_ADDR, lax, 4);
+    INS_ADD(0xAF, ABSO_ADDR, lax, 4);
+    INS_ADD(0xBF, AIY_ADDR, lax, 4);
+    INS_ADD(0xA3, IDIRI_ADDR, lax, 6);
+    INS_ADD(0xB3, IIDIR_ADDR, lax, 5);
 }
 
 void ins_adc(struct cpu_6502 *p, uint16_t addr)
@@ -806,6 +815,20 @@ void ins_tya(struct cpu_6502 *p, uint16_t addr)
     p->rA = p->rY;
     set_rp(p, P_N, p->rA >> 7);
     set_rp(p, P_Z, p->rA == 0);
+}
+
+void ins_aax(struct cpu_6502 *p, uint16_t addr)
+{
+    mem_write(p, addr, p->rA & p->rX);
+}
+
+void ins_lax(struct cpu_6502 *p, uint16_t addr)
+{
+    uint8_t val = mem_read(p, addr);
+    p->rA = val;
+    p->rX = val;
+    set_rp(p, P_Z, val == 0);
+    set_rp(p, P_N, val >> 7);
 }
 
 void ins_unknown(struct cpu_6502 *p, uint16_t addr)

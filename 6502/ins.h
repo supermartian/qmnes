@@ -96,5 +96,7 @@ void ins_txa(struct cpu_6502 *p, uint16_t addr);
 void ins_txs(struct cpu_6502 *p, uint16_t addr);
 void ins_tya(struct cpu_6502 *p, uint16_t addr);
 
+void ins_aax(struct cpu_6502 *p, uint16_t addr);
+void ins_lax(struct cpu_6502 *p, uint16_t addr);
 void ins_unknown(struct cpu_6502 *p, uint16_t addr);
 #endif /* !__INS_H__ */

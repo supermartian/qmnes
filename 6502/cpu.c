@@ -118,6 +118,7 @@ uint16_t addr_idiri(struct cpu_6502 *p)
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
     ret += p->rX;
+    ret &= 0xff;
     ret = mem_read(p, ret) | (mem_read(p, ret + 1) << 8);
     return ret;
 }
