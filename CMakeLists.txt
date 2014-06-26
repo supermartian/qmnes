@@ -4,6 +4,7 @@ PROJECT(qmnes)
 cmake_minimum_required(VERSION 2.8)
 
 #set(CMAKE_VERBOSE_MAKEFILE true)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${qmnes_SOURCE_DIR}/cmake")
 
 IF(APPLE)
 find_library(FOUNDATION Foundation)
@@ -27,10 +28,11 @@ SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -ggdb -O0  -Wall -Wextra -DDEBUG")
 
 SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -g -O0  -Wall -Wextra")
 
-SET(LIBS ${OpenCV_LIBS} ${EXTRA_LIBS})
-
 # Build paths
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+
+find_package(SDL2 REQUIRED)
+include_directories(${SDL2_INCLUDE_DIR})
 
 # Include directories
 INCLUDE_DIRECTORIES("6502/")
@@ -38,16 +40,19 @@ INCLUDE_DIRECTORIES("ppu/")
 INCLUDE_DIRECTORIES("apu/")
 INCLUDE_DIRECTORIES("rom/")
 
+
 link_directories("${qmnes_SOURCE_DIR}/6502/")
 link_directories("${qmnes_SOURCE_DIR}/ppu/")
 link_directories("${qmnes_SOURCE_DIR}/apu/")
 link_directories("${qmnes_SOURCE_DIR}/rom/")
 
-add_executable(test
-    test.c
+add_executable(sdl2test
+    sdltest.c
     6502/cpu.c
     6502/ins.c
     rom/rom.c)
+message(STATUS "${SDL2_LIBRARY} -- ${SDL2_INCLUDE_DIR}")
+target_link_libraries(sdl2test ${SDL2_LIBRARY})
 
 #cpack stuff goes here
 
