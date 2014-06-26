@@ -73,6 +73,7 @@ struct cpu_6502 {
     uint8_t rst, prev_rst;
 
     uint32_t cycle;
+    uint32_t ins_cnt;
 
     uint8_t *rom_prg;
 };
@@ -102,6 +103,9 @@ uint16_t addr_idiri(struct cpu_6502 *p);
 uint16_t addr_iidir(struct cpu_6502 *p);
 uint16_t addr_absidir(struct cpu_6502 *p);
 
+void cpu_chk_irq(struct cpu_6502 *p);
+void cpu_chk_nmi(struct cpu_6502 *p);
+void cpu_chk_rst(struct cpu_6502 *p);
 void cpu_setup(struct cpu_6502 *p);
 void cpu_reset(struct cpu_6502 *p);
 uint16_t cpu_op_fetch_addr(struct cpu_6502 *p, uint8_t opcode);

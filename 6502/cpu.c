@@ -27,8 +27,12 @@ uint16_t addr_imm8(struct cpu_6502 *p)
  * */
 uint16_t addr_rela(struct cpu_6502 *p)
 {
+    uint16_t tmp;
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
+    if (ret & 0x80)
+        ret -= 0x100;
+    
     ret += p->rPC;
     // Relative addressing is only used by branch instructions.
     // Any page crossing issue will be dealt inside the instruction function.
@@ -93,7 +97,7 @@ uint16_t addr_zpix(struct cpu_6502 *p)
 {
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
-    return ret + p->rX;
+    return (ret + p->rX) & 0xff;
 }
 
 /*
@@ -103,7 +107,7 @@ uint16_t addr_zpiy(struct cpu_6502 *p)
 {
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
-    return ret + p->rY;
+    return (ret + p->rY) & 0xff;
 }
 
 /*
@@ -123,9 +127,10 @@ uint16_t addr_idiri(struct cpu_6502 *p)
  * */
 uint16_t addr_iidir(struct cpu_6502 *p)
 {
-    uint16_t ret = mem_read(p, p->rPC);
-    p->rPC++;
-    ret = mem_read(p, ret) | (mem_read(p, ret + 1) << 8);
+    uint16_t ret;
+    uint16_t tmp = mem_read(p, p->rPC++);
+    ret = mem_read(p, tmp++);
+    ret |= mem_read(p, tmp & 0xff) << 8;
     ret += p->rY;
     page_boundary_chk(p, ret);
     return ret;
@@ -133,14 +138,19 @@ uint16_t addr_iidir(struct cpu_6502 *p)
 
 /*
  * Absolute indirect addressing.
+ * There's a known bug here. The address doesn't cross pages.
+ * http://wiki.nesdev.com/w/index.php/Errata#CPU
  * */
 uint16_t addr_absidir(struct cpu_6502 *p)
 {
-    uint16_t ret = mem_read(p, p->rPC);
+    uint16_t tmp = mem_read(p, p->rPC);
+    uint16_t ret;
     p->rPC++;
-    ret |= mem_read(p, p->rPC) << 8;
+    tmp |= mem_read(p, p->rPC) << 8;
     p->rPC++;
-    ret = mem_read(p, ret) | (mem_read(p, ret + 1) << 8);
+    ret = mem_read(p, tmp);
+    tmp = (tmp & 0xff00) | ((tmp + 1) & 0xff);
+    ret |= mem_read(p, tmp) << 8;
     return ret;
 }
 
@@ -165,6 +175,7 @@ void cpu_reset(struct cpu_6502 *p)
     uint16_t start_addr;
     memset(p->ram, 0xFF, 0x0800 * sizeof(uint8_t));
     p->cycle = 0;
+    p->ins_cnt = 1;
 
     start_addr = mem_read(p, 0xFFFC);
     start_addr |= mem_read(p, 0xFFFD) << 8;
@@ -231,11 +242,12 @@ void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode)
 
     i->f(p, addr);
     p->cycle += i->cycle;
+    p->ins_cnt++;
 }
 
 void cpu_dump(struct cpu_6502 *p)
 {
-    printf("========================================================\n");
+    printf("[%d]=====================================================\n", p->ins_cnt);
     // dump memory
     /*
      *int i, j;

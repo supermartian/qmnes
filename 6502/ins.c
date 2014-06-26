@@ -22,8 +22,8 @@ void ins_table_init()
     INS_ADD(0x6D, ABSO_ADDR, adc, 4);
     INS_ADD(0x7D, AIX_ADDR, adc, 4);
     INS_ADD(0x79, AIY_ADDR, adc, 4);
-    INS_ADD(0x61, IIDIR_ADDR, adc, 6);
-    INS_ADD(0x71, IDIRI_ADDR, adc, 5);
+    INS_ADD(0x61, IDIRI_ADDR, adc, 6);
+    INS_ADD(0x71, IIDIR_ADDR, adc, 5);
 
     // AND 
     INS_ADD(0x29, IMM8_ADDR, and, 2);
@@ -32,8 +32,8 @@ void ins_table_init()
     INS_ADD(0x2D, ABSO_ADDR, and, 4);
     INS_ADD(0x3D, AIX_ADDR, and, 4);
     INS_ADD(0x39, AIY_ADDR, and, 4);
-    INS_ADD(0x21, IIDIR_ADDR, and, 6);
-    INS_ADD(0x31, IDIRI_ADDR, and, 5);
+    INS_ADD(0x21, IDIRI_ADDR, and, 6);
+    INS_ADD(0x31, IIDIR_ADDR, and, 5);
 
     // ASL
     INS_ADD(0x0A, ACCU_ADDR, asla, 2);
@@ -71,8 +71,8 @@ void ins_table_init()
     INS_ADD(0xCD, ABSO_ADDR, cmp, 4);
     INS_ADD(0xDD, AIX_ADDR, cmp, 4);
     INS_ADD(0xD9, AIY_ADDR, cmp, 4);
-    INS_ADD(0xC1, IIDIR_ADDR, cmp, 6);
-    INS_ADD(0xD1, IDIRI_ADDR, cmp, 5);
+    INS_ADD(0xC1, IDIRI_ADDR, cmp, 6);
+    INS_ADD(0xD1, IIDIR_ADDR, cmp, 5);
 
     INS_ADD(0xE0, IMM8_ADDR, cpx, 2);
     INS_ADD(0xE4, ZP_ADDR, cpx, 3);
@@ -97,8 +97,8 @@ void ins_table_init()
     INS_ADD(0x4D, ABSO_ADDR, eor, 4);
     INS_ADD(0x5D, AIX_ADDR, eor, 4);
     INS_ADD(0x59, AIY_ADDR, eor, 4);
-    INS_ADD(0x41, IIDIR_ADDR, eor, 6);
-    INS_ADD(0x51, IDIRI_ADDR, eor, 5);
+    INS_ADD(0x41, IDIRI_ADDR, eor, 6);
+    INS_ADD(0x51, IIDIR_ADDR, eor, 5);
 
     // INC
     INS_ADD(0xE6, ZP_ADDR, inc, 5);
@@ -121,8 +121,8 @@ void ins_table_init()
     INS_ADD(0xAD, ABSO_ADDR, lda, 4);
     INS_ADD(0xBD, AIX_ADDR, lda, 4);
     INS_ADD(0xB9, AIY_ADDR, lda, 4);
-    INS_ADD(0xA1, IIDIR_ADDR, lda, 6);
-    INS_ADD(0xB1, IDIRI_ADDR, lda, 5);
+    INS_ADD(0xA1, IDIRI_ADDR, lda, 6);
+    INS_ADD(0xB1, IIDIR_ADDR, lda, 5);
 
     INS_ADD(0xA2, IMM8_ADDR, ldx, 2);
     INS_ADD(0xA6, ZP_ADDR, ldx, 3);
@@ -152,8 +152,8 @@ void ins_table_init()
     INS_ADD(0x0D, ABSO_ADDR, ora, 4);
     INS_ADD(0x1D, AIX_ADDR, ora, 4);
     INS_ADD(0x19, AIY_ADDR, ora, 4);
-    INS_ADD(0x01, IIDIR_ADDR, ora, 6);
-    INS_ADD(0x11, IDIRI_ADDR, ora, 5);
+    INS_ADD(0x01, IDIRI_ADDR, ora, 6);
+    INS_ADD(0x11, IIDIR_ADDR, ora, 5);
 
     INS_ADD(0x48, IMPL_ADDR, pha, 3);
     INS_ADD(0x08, IMPL_ADDR, php, 3);
@@ -184,8 +184,8 @@ void ins_table_init()
     INS_ADD(0xED, ABSO_ADDR, sbc, 4);
     INS_ADD(0xFD, AIX_ADDR, sbc, 4);
     INS_ADD(0xF9, AIY_ADDR, sbc, 4);
-    INS_ADD(0xE1, IIDIR_ADDR, sbc, 6);
-    INS_ADD(0xF1, IDIRI_ADDR, sbc, 5);
+    INS_ADD(0xE1, IDIRI_ADDR, sbc, 6);
+    INS_ADD(0xF1, IIDIR_ADDR, sbc, 5);
 
     INS_ADD(0x38, IMPL_ADDR, sec, 2);
     INS_ADD(0xF8, IMPL_ADDR, sed, 2);
@@ -197,8 +197,8 @@ void ins_table_init()
     INS_ADD(0x8D, ABSO_ADDR, sta, 4);
     INS_ADD(0x9D, AIX_ADDR, sta, 5);
     INS_ADD(0x99, AIY_ADDR, sta, 5);
-    INS_ADD(0x81, IIDIR_ADDR, sta, 6);
-    INS_ADD(0x91, IDIRI_ADDR, sta, 6);
+    INS_ADD(0x81, IDIRI_ADDR, sta, 6);
+    INS_ADD(0x91, IIDIR_ADDR, sta, 6);
 
     // STX
     INS_ADD(0x86, ZP_ADDR, stx, 3);
@@ -207,7 +207,7 @@ void ins_table_init()
 
     // STY
     INS_ADD(0x84, ZP_ADDR, sty, 3);
-    INS_ADD(0x94, ZPIY_ADDR, sty, 4);
+    INS_ADD(0x94, ZPIX_ADDR, sty, 4);
     INS_ADD(0x8C, ABSO_ADDR, sty, 4);
 
     INS_ADD(0xAA, IMPL_ADDR, tax, 2);
@@ -216,23 +216,96 @@ void ins_table_init()
     INS_ADD(0x8A, IMPL_ADDR, txa, 2);
     INS_ADD(0x9A, IMPL_ADDR, txs, 2);
     INS_ADD(0x98, IMPL_ADDR, tya, 2);
+
+    // UNDOCUMENTED!
+    // http://nesdev.com/undocumented_opcodes.txt
+/*
+ *
+ *    // AAC
+ *    INS_ADD(0x0B, IMM8_ADDR, aac, 2);
+ *    INS_ADD(0x2B, IMM8_ADDR, aac, 2);
+ *
+ *    // AAX
+ *    INS_ADD(0x87, ZP_ADDR, aax, 3);
+ *    INS_ADD(0x97, ZPIY_ADDR, aax, 4);
+ *    INS_ADD(0x83, IDIRI_ADDR, aax, 6);
+ *    INS_ADD(0x8f, ABSO_ADDR, aax, 4);
+ *
+ *    // ARR
+ *    INS_ADD(0x6B, IMM8_ADDR, arr, 2);
+ *
+ *    // ASR
+ *    INS_ADD(0x4B, IMM8_ADDR, asr, 2);
+ *
+ *    // ATX
+ *    INS_ADD(0xAB, IMM8_ADDR, atx, 2);
+ *
+ *    // AXA
+ *    INS_ADD(0x9F, AIY_ADDR, axa, 5);
+ *    INS_ADD(0x93, IIDIR_ADDR, axa, 6);
+ *
+ *    // AXS
+ *    INS_ADD(0xCB, IMM8_ADDR, axs, 2);
+ *
+ *    // DCP
+ *    INS_ADD(0xC7, ZP_ADDR, dcp, 5);
+ *    INS_ADD(0xD7, ZPIX_ADDR, dcp, 6);
+ *    INS_ADD(0xCF, ABSO_ADDR, dcp, 6);
+ *    INS_ADD(0xDF, AIX_ADDR, dcp, 7);
+ *    INS_ADD(0xDB, AIY_ADDR, dcp, 7);
+ *    INS_ADD(0xC3, IIDIR_ADDR, dcp, 8);
+ *    INS_ADD(0xD3, IDIRI_ADDR, dcp, 8);
+ */
+
+    // DOP
+    INS_ADD(0x04, ZP_ADDR, nop, 3);
+    INS_ADD(0x14, ZPIX_ADDR, nop, 4);
+    INS_ADD(0x34, ZPIX_ADDR, nop, 4);
+    INS_ADD(0x44, ZP_ADDR, nop, 3);
+    INS_ADD(0x54, ZPIX_ADDR, nop, 4);
+    INS_ADD(0x64, ZP_ADDR, nop, 3);
+    INS_ADD(0x74, ZPIX_ADDR, nop, 4);
+    INS_ADD(0x80, IMM8_ADDR, nop, 2);
+    INS_ADD(0x82, IMM8_ADDR, nop, 2);
+    INS_ADD(0x89, IMM8_ADDR, nop, 2);
+    INS_ADD(0xC2, IMM8_ADDR, nop, 2);
+    INS_ADD(0xD4, ZPIX_ADDR, nop, 4);
+    INS_ADD(0xE2, IMM8_ADDR, nop, 2);
+    INS_ADD(0xF4, ZPIX_ADDR, nop, 4);
+
+    // NOP
+    INS_ADD(0x1A, IMPL_ADDR, nop, 2);
+    INS_ADD(0x3A, IMPL_ADDR, nop, 2);
+    INS_ADD(0x5A, IMPL_ADDR, nop, 2);
+    INS_ADD(0x7A, IMPL_ADDR, nop, 2);
+    INS_ADD(0xDA, IMPL_ADDR, nop, 2);
+    INS_ADD(0xFA, IMPL_ADDR, nop, 2);
+
+    // TOP
+    INS_ADD(0x0C, ABSO_ADDR, nop, 4);
+    INS_ADD(0x1C, AIX_ADDR, nop, 4);
+    INS_ADD(0x3C, AIX_ADDR, nop, 4);
+    INS_ADD(0x5C, AIX_ADDR, nop, 4);
+    INS_ADD(0x7C, AIX_ADDR, nop, 4);
+    INS_ADD(0xDC, AIX_ADDR, nop, 4);
+    INS_ADD(0xFC, AIX_ADDR, nop, 4);
 }
 
 void ins_adc(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t t;
     uint8_t val = mem_read(p, addr);
+
     t = p->rA + val + get_rp(p, P_C);
-    set_rp(p, P_V, (p->rA ^ t) >> 7);
-    set_rp(p, P_N, p->rA >> 7);
-    set_rp(p, P_Z, t == 0);
-    if (get_rp(p, P_D)) {
-        /* No BCD supported in NES */
-    } else {
-        set_rp(p, P_C, t > 255);
-    }
+
+    /* No BCD supported in NES */
+    set_rp(p, P_C, (t & 0xff00) != 0);
+    set_rp(p, P_V, (((p->rA ^ t) & (val ^ t)) & 0x80) ? 1 : 0);
 
     p->rA = t & 0xff;
+
+    set_rp(p, P_Z, p->rA == 0);
+    set_rp(p, P_N, p->rA >> 7);
 }
 
 void ins_and(struct cpu_6502 *p, uint16_t addr)
@@ -394,7 +467,8 @@ void ins_cmp(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     uint8_t t = p->rA - val;
-    set_rp(p, P_C, t >= 0);
+    printf("in cmp %x %x %x\n", p->rA, val, t);
+    set_rp(p, P_C, p->rA >= val);
     set_rp(p, P_N, t >> 7);
     set_rp(p, P_Z, t == 0);
 }
@@ -557,7 +631,7 @@ void ins_pha(struct cpu_6502 *p, uint16_t addr)
 
 void ins_php(struct cpu_6502 *p, uint16_t addr)
 {
-    stack_push(p, read_rp(p) | 0x10);
+    stack_push(p, read_rp(p) | 0x30);
 }
 
 void ins_pla(struct cpu_6502 *p, uint16_t addr)
@@ -652,20 +726,16 @@ void ins_rts(struct cpu_6502 *p, uint16_t addr)
 void ins_sbc(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
-    uint8_t t;
+    uint16_t t;
 
-    if (get_rp(p, P_D)) {
-        /* No BCD supported in NES */
-    } else {
-        t = p->rA - val - !get_rp(p, P_C);
-        set_rp(p, P_V, (t > 127));
-    }
+    t = p->rA - val - !get_rp(p, P_C);
+    set_rp(p, P_V, (((p->rA ^ val) & (p->rA ^ t)) & 0x80) ? 1 : 0);
 
-    set_rp(p, P_C, (t >= 0));
-    set_rp(p, P_N, (t >> 7));
-    set_rp(p, P_Z, (t == 0));
+    set_rp(p, P_C, (t & 0xff00) == 0);
 
     p->rA = t & 0xFF;
+    set_rp(p, P_N, p->rA >> 7);
+    set_rp(p, P_Z, p->rA == 0);
 }
 
 void ins_sec(struct cpu_6502 *p, uint16_t addr)
@@ -741,5 +811,5 @@ void ins_tya(struct cpu_6502 *p, uint16_t addr)
 void ins_unknown(struct cpu_6502 *p, uint16_t addr)
 {
     printf("Unknown instruction, emergency out\n");
-    exit(0);
+//    exit(0);
 }
