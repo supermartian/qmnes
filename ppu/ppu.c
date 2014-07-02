@@ -43,3 +43,29 @@ void vram_write(struct ppu *p, uint16_t addr, uint8_t val)
     }
 }
 
+void ppu_setup(struct ppu *p)
+{
+    memset(p->vram1, 0xff, 0x0f00 * sizeof(uint8_t));
+    memset(p->vram2, 0, 0x0020 * sizeof(uint8_t));
+
+    p->ctl = 0;
+    p->mask = 0;
+    p->status = 0;
+    p->oama = 0;
+    p->oamd = 0;
+    p->scroll = 0;
+    p->addr = 0;
+    p->addr = 0;
+}
+
+uint8_t ppu_read_reg(struct ppu *p, uint16_t addr)
+{
+    uint8_t *r = p;
+    return r[addr];
+}
+
+void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
+{
+    uint8_t *r = p;
+    return r[addr];
+}

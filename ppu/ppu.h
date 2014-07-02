@@ -8,6 +8,7 @@
 #ifndef __PPU_H__
 #define __PPU_H__
 
+#include <stdint.h>
 /*
  * PPU memory map
  *
@@ -43,14 +44,14 @@
  * */
 
 struct ppu {
-    uint8_t ctl;
-    uint8_t mask;
-    uint8_t status;
-    uint8_t oama;
-    uint8_t oamd;
-    uint8_t scroll;
-    uint8_t addr;
-    uint8_t data;
+    uint8_t ctl;                // write
+    uint8_t mask;               // write
+    uint8_t status;             // read 
+    uint8_t oama;               // write
+    uint8_t oamd;               // write/read
+    uint8_t scroll;             // write * 2
+    uint8_t addr;               // write * 2
+    uint8_t data;               // write/read
 
     uint8_t vram1[0x0F00];
     uint8_t vram2[0x0020];
@@ -61,6 +62,10 @@ struct ppu {
 uint16_t vram_addr(uint16_t addr);
 uint8_t vram_read(struct ppu *p, uint16_t addr);
 void vram_write(struct ppu *p, uint16_t addr, uint8_t val);
+uint8_t ppu_read_reg(struct ppu *p, uint16_t addr);
+void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val);
+
+void ppu_setup(struct ppu *p);
 
 #endif /* !__PPU_H__ */
 

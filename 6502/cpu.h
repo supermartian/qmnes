@@ -9,6 +9,8 @@
 #define __CPU_H__
 
 #include <stdint.h>
+
+#include "ppu.h"
 /*
  * NES 2A03 CPU memory map
  *
@@ -76,6 +78,8 @@ struct cpu_6502 {
     uint32_t ins_cnt;
 
     uint8_t *rom_prg;
+
+    struct ppu *ppu;
 };
 
 void page_boundary_chk(struct cpu_6502 *p, uint16_t addr);
@@ -103,9 +107,7 @@ uint16_t addr_idiri(struct cpu_6502 *p);
 uint16_t addr_iidir(struct cpu_6502 *p);
 uint16_t addr_absidir(struct cpu_6502 *p);
 
-void cpu_chk_irq(struct cpu_6502 *p);
-void cpu_chk_nmi(struct cpu_6502 *p);
-void cpu_chk_rst(struct cpu_6502 *p);
+void cpu_handle_intr(struct cpu_6502 *p);
 void cpu_setup(struct cpu_6502 *p);
 void cpu_reset(struct cpu_6502 *p);
 uint16_t cpu_op_fetch_addr(struct cpu_6502 *p, uint8_t opcode);

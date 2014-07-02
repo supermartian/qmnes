@@ -36,7 +36,6 @@ uint16_t addr_rela(struct cpu_6502 *p)
     ret += p->rPC;
     // Relative addressing is only used by branch instructions.
     // Any page crossing issue will be dealt inside the instruction function.
-    printf("rela %x\n", ret);
     return ret;
 }
 
@@ -282,10 +281,33 @@ void cpu_run(struct cpu_6502 *p)
     uint8_t op2;
     for (;;)
     {
-        cpu_dump(p);
+        //cpu_dump(p);
         opcode = mem_read(p, p->rPC);
         p->rPC++;
         cpu_execute_op(p, opcode);
+        if (p->nmi || p->irq) {
+            //cpu_handle_intr(p);
+        }
+    }
+}
+
+/*
+ * Deal with NMI and IRQ.
+ *
+ */
+void cpu_handle_intr(struct cpu_6502 *p)
+{
+    stack_push(p, p->rPC >> 8);
+    stack_push(p, p->rPC & 0xFF);
+    stack_push(p, read_rp(p));
+
+    set_rp(p, P_I, 1);
+    if (p->nmi) {
+        p->rPC = mem_read(p, 0xFFFA) | ((uint16_t)mem_read(p, 0xFFFB) << 8);
+        p->nmi = 0;
+    } else {
+        p->rPC = mem_read(p, 0xFFFE) | ((uint16_t)mem_read(p, 0xFFFF) << 8);
+        p->irq = 0;
     }
 }
 
@@ -320,11 +342,11 @@ uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t addr_ = mem_addr(addr);
     if (addr_ < 0x0800) {
-        printf("Reading ram %x %x\n", addr_, p->ram[addr_]);
         return p->ram[addr_];
+    } else if (addr_ >= 0x2000 && addr_ < 0x2008) {
+        return ppu_read_reg(p->ppu, addr - 0x2000);
     } else if (addr_ >= 0x8000) {
-        printf("Reading cartiage %x, %x\n", addr_-0xC000, p->rom_prg[addr_ - 0xC000]);
-        return p->rom_prg[addr_ - 0xC000];
+        return p->rom_prg[addr_ - 0x8000];
     }
     return 0;
 }
@@ -336,10 +358,10 @@ uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val)
 {
     uint16_t addr_ = mem_addr(addr);
     if (addr_ < 0x0800) {
-        printf("writing ram %x %x\n", addr_, val);
         p->ram[addr_] = val;
+    } else if (addr_ >= 0x2000 && addr_ < 0x2008) {
+        ppu_write_reg(p->ppu, addr - 0x2000, val);
     } else if (addr_ >= 0x8000) {
-        printf("writing cartiage %x\n", addr_ - 0x8000);
         //p->rom_prg[addr_ - 0x8000] = val;
     }
     return 0;

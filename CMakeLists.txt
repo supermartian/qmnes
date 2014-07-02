@@ -46,13 +46,13 @@ link_directories("${qmnes_SOURCE_DIR}/ppu/")
 link_directories("${qmnes_SOURCE_DIR}/apu/")
 link_directories("${qmnes_SOURCE_DIR}/rom/")
 
-add_executable(sdl2test
-    sdltest.c
+add_executable(test
+    test.c
     6502/cpu.c
     6502/ins.c
+    ppu/ppu.c
     rom/rom.c)
 message(STATUS "${SDL2_LIBRARY} -- ${SDL2_INCLUDE_DIR}")
-target_link_libraries(sdl2test ${SDL2_LIBRARY})
 
 #cpack stuff goes here
 

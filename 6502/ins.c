@@ -476,7 +476,6 @@ void ins_cmp(struct cpu_6502 *p, uint16_t addr)
 {
     uint8_t val = mem_read(p, addr);
     uint8_t t = p->rA - val;
-    printf("in cmp %x %x %x\n", p->rA, val, t);
     set_rp(p, P_C, p->rA >= val);
     set_rp(p, P_N, t >> 7);
     set_rp(p, P_Z, t == 0);
@@ -728,7 +727,6 @@ void ins_rts(struct cpu_6502 *p, uint16_t addr)
     uint16_t pc;
     pc = stack_pop(p);
     pc |= stack_pop(p) << 8;
-    printf("rts %x\n", pc + 1);
     p->rPC = pc + 1;
 }
 
