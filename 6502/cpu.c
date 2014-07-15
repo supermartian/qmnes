@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "cpu.h"
+#include "ppu.h"
 #include "ins.h"
 
 // All the addressing functions return the address of the prospective memory.
@@ -181,6 +182,7 @@ void cpu_reset(struct cpu_6502 *p)
     start_addr |= mem_read(p, 0xFFFD) << 8;
 
     p->rPC = start_addr;
+    printf("start from %x\n", start_addr);
     p->rS = 0xFD;
     p->rA = 0;
     p->rX = 0;
@@ -193,10 +195,11 @@ void cpu_reset(struct cpu_6502 *p)
     p->rst = 0;
 }
 
-void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode)
+uint8_t cpu_execute_op(struct cpu_6502 *p, uint8_t opcode)
 {
     struct ins *i = &(ins_table[opcode]);
     uint16_t addr = 0;
+    uint32_t oldcycle = p->cycle;
     switch (i->addr) {
         case IMPL_ADDR:
             break;
@@ -243,6 +246,7 @@ void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode)
     i->f(p, addr);
     p->cycle += i->cycle;
     p->ins_cnt++;
+    return p->cycle - oldcycle;
 }
 
 void cpu_dump(struct cpu_6502 *p)
@@ -279,15 +283,18 @@ void cpu_run(struct cpu_6502 *p)
     uint8_t opcode;
     uint8_t op1;
     uint8_t op2;
+    uint8_t cycle;
     for (;;)
     {
         //cpu_dump(p);
         opcode = mem_read(p, p->rPC);
         p->rPC++;
-        cpu_execute_op(p, opcode);
+        cycle = cpu_execute_op(p, opcode);
         if (p->nmi || p->irq) {
-            //cpu_handle_intr(p);
+            cpu_handle_intr(p);
         }
+
+        ppu_run(p->ppu, cycle * 3);
     }
 }
 

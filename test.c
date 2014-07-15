@@ -26,6 +26,8 @@ int main(int argc, char **argv)
     struct ppu ppu;
 
     cpu_setup(&cpu);
+    ppu_setup(&ppu);
+    cpu.ppu = &ppu;
 
     load_rom(&test_rom, filename);
     printf("Prog size %x\n", test_rom.prg_rom_data);

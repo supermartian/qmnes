@@ -10,7 +10,7 @@
 uint16_t vram_addr(uint16_t addr)
 {
 
-    if (addr >= 0x2000 && addr < 0x3F00) {
+    if (addr >= 0x3000 && addr < 0x3F00) {
         return addr - 0x1000;
     } else if (addr >= 0x3F00 && addr < 0x4000) {
         return (addr - 0x3F00) % 0x20 + 0x3F00;
@@ -60,12 +60,52 @@ void ppu_setup(struct ppu *p)
 
 uint8_t ppu_read_reg(struct ppu *p, uint16_t addr)
 {
-    uint8_t *r = p;
-    return r[addr];
+    switch (addr) {
+        case 2:
+            return p->status;
+        case 4:
+            return p->oamd;
+        case 7:
+            return p->data;
+        default:
+            return 0;
+    }
 }
 
 void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
 {
-    uint8_t *r = p;
-    return r[addr];
+    switch (addr) {
+        case 0:
+            p->ctl = val;
+            break;
+        case 1:
+            p->mask = val;
+            break;
+        case 3:
+            p->oama = val;
+            break;
+        case 4:
+            p->oamd = val;
+            break;
+        case 5:
+            p->scroll = val;
+            break;
+        case 6:
+            p->addr = val;
+            break;
+        case 7:
+            p->data = val;
+            break;
+        default:
+            break;
+            // do shit
+    }
+}
+
+void ppu_run(struct ppu *p, uint8_t cycle)
+{
+    int i;
+    for (i = 0; i < 61440; i++)
+        p->frame[i] = random();
+    p->r(p->frame);
 }

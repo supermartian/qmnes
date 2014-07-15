@@ -43,6 +43,8 @@
  *
  * */
 
+typedef void (renderer)(uint32_t *pixels);
+
 struct ppu {
     uint8_t ctl;                // write
     uint8_t mask;               // write
@@ -57,6 +59,9 @@ struct ppu {
     uint8_t vram2[0x0020];
 
     uint8_t *rom_chr;
+
+    uint32_t frame[61440];
+    renderer *r;
 };
 
 uint16_t vram_addr(uint16_t addr);
@@ -66,6 +71,7 @@ uint8_t ppu_read_reg(struct ppu *p, uint16_t addr);
 void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val);
 
 void ppu_setup(struct ppu *p);
+void ppu_run(struct ppu *p, uint8_t cycle);
 
 #endif /* !__PPU_H__ */
 

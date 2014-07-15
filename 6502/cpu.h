@@ -111,7 +111,7 @@ void cpu_handle_intr(struct cpu_6502 *p);
 void cpu_setup(struct cpu_6502 *p);
 void cpu_reset(struct cpu_6502 *p);
 uint16_t cpu_op_fetch_addr(struct cpu_6502 *p, uint8_t opcode);
-void cpu_execute_op(struct cpu_6502 *p, uint8_t opcode);
+uint8_t cpu_execute_op(struct cpu_6502 *p, uint8_t opcode);
 void cpu_run(struct cpu_6502 *p);
 
 #endif /* !__CPU_H__ */
