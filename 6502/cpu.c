@@ -295,7 +295,29 @@ void cpu_run(struct cpu_6502 *p)
         }
 
         ppu_run(p->ppu, cycle * 3);
+        p->handle_input(p);
     }
+}
+
+void joystick_write(struct cpu_6502 *p, uint8_t val)
+{
+    printf("no\n");
+    if (!(val & 0x1)) {
+        p->strobe = 1;
+    } else if ((val & 0x1) && p->strobe == 1) {
+        p->strobe = 2;
+    }
+}
+
+uint8_t joystick_read(struct cpu_6502 *p)
+{
+    printf("Reading joystick: %d-%d\n", p->keynow, p->keypad[p->keynow]);
+    if (p->strobe != 2) {
+        p->keynow = 0;
+    }
+
+    p->keynow = (p->keynow + 1) % 8;
+    return p->keypad[p->keynow] ? 0x03 : 0x00; 
 }
 
 /*
@@ -352,8 +374,11 @@ uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
         return p->ram[addr_];
     } else if (addr_ >= 0x2000 && addr_ < 0x2008) {
         return ppu_read_reg(p->ppu, addr - 0x2000);
+    } else if (addr_ == 0x4016) {
+        return joystick_read(p);
     } else if (addr_ >= 0x8000) {
         return p->rom_prg[addr_ - 0x8000];
+    } else {
     }
     return 0;
 }
@@ -368,6 +393,8 @@ uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val)
         p->ram[addr_] = val;
     } else if (addr_ >= 0x2000 && addr_ < 0x2008) {
         ppu_write_reg(p->ppu, addr - 0x2000, val);
+    } else if (addr_ == 0x4016) {
+        joystick_write(p, val);
     } else if (addr_ >= 0x8000) {
         //p->rom_prg[addr_ - 0x8000] = val;
     }

@@ -19,6 +19,77 @@ SDL_Surface *gScreen = NULL;
 SDL_Renderer *gRender = NULL;
 SDL_Texture *gTexture = NULL;
 
+void input_handler(struct cpu_6502 *p)
+{
+    SDL_Event event;
+    while(SDL_PollEvent(&event)) {
+        switch(event.type) {
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym) {
+                    case SDLK_w:
+                        p->keypad[KEYPAD_UP] = 1;
+                        break;
+                    case SDLK_s:
+                        p->keypad[KEYPAD_DOWN] = 1;
+                        break;
+                    case SDLK_a:
+                        p->keypad[KEYPAD_LEFT] = 1;
+                        break;
+                    case SDLK_d:
+                        p->keypad[KEYPAD_RIGHT] = 1;
+                        break;
+                    case SDLK_u:
+                        p->keypad[KEYPAD_START] = 1;
+                        break;
+                    case SDLK_i:
+                        p->keypad[KEYPAD_SELECT] = 1;
+                        break;
+                    case SDLK_j:
+                        p->keypad[KEYPAD_A] = 1;
+                        break;
+                    case SDLK_k:
+                        p->keypad[KEYPAD_B] = 1;
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case SDL_KEYUP:
+                switch (event.key.keysym.sym) {
+                    case SDLK_w:
+                        p->keypad[KEYPAD_UP] = 0;
+                        break;
+                    case SDLK_s:
+                        p->keypad[KEYPAD_DOWN] = 0;
+                        break;
+                    case SDLK_a:
+                        p->keypad[KEYPAD_LEFT] = 0;
+                        break;
+                    case SDLK_d:
+                        p->keypad[KEYPAD_RIGHT] = 0;
+                        break;
+                    case SDLK_u:
+                        p->keypad[KEYPAD_START] = 0;
+                        break;
+                    case SDLK_i:
+                        p->keypad[KEYPAD_SELECT] = 0;
+                        break;
+                    case SDLK_j:
+                        p->keypad[KEYPAD_A] = 0;
+                        break;
+                    case SDLK_k:
+                        p->keypad[KEYPAD_B] = 0;
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 void render(uint32_t *pixels)
 {
     uint32_t *p;
@@ -57,7 +128,6 @@ void sighdl(int sig)
         gWindow = NULL;
 
         SDL_Quit();
-        SDL_Quit();
 
         printf("Bye my dear\n");
         exit(0);
@@ -81,6 +151,7 @@ int main(int argc, char **argv)
     cpu_setup(&cpu);
     ppu_setup(&ppu);
     cpu.ppu = &ppu;
+    cpu.handle_input = input_handler;
     ppu.r = render;
 
     // Get ready for SDL.

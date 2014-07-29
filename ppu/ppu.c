@@ -56,6 +56,9 @@ void ppu_setup(struct ppu *p)
     p->scroll = 0;
     p->addr = 0;
     p->addr = 0;
+
+    p->s_1stwrite = 1;
+    p->a_1stwrite = 1;
 }
 
 uint8_t ppu_read_reg(struct ppu *p, uint16_t addr)
@@ -88,10 +91,17 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
             p->oamd = val;
             break;
         case 5:
-            p->scroll = val;
+            if (p->s_1stwrite) {
+                p->scroll = val & 0x00ff;
+            }
             break;
         case 6:
-            p->addr = val;
+            if (p->a_1stwrite) {
+                p->addr = 0xff00 & (val << 8);
+            } else {
+                p->addr |= 0x00ff & val;
+                // Now do the actual read and write
+            }
             break;
         case 7:
             p->data = val;

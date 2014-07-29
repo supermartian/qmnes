@@ -51,8 +51,8 @@ struct ppu {
     uint8_t status;             // read 
     uint8_t oama;               // write
     uint8_t oamd;               // write/read
-    uint8_t scroll;             // write * 2
-    uint8_t addr;               // write * 2
+    uint16_t scroll;             // write * 2
+    uint16_t addr;               // write * 2
     uint8_t data;               // write/read
 
     uint8_t vram1[0x0F00];
@@ -61,6 +61,11 @@ struct ppu {
     uint8_t *rom_chr;
 
     uint32_t frame[61440];
+    uint32_t scanline;
+    uint8_t odd_frame;
+
+    uint8_t s_1stwrite;         // Write indicator for scroll
+    uint8_t a_1stwrite;         // Write indicator for addr
     renderer *r;
 };
 

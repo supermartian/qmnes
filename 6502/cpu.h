@@ -61,6 +61,19 @@
 #define P_Z 1
 #define P_C 0
 
+typedef enum {
+    KEYPAD_A = 0,
+    KEYPAD_B,
+    KEYPAD_SELECT,
+    KEYPAD_START,
+    KEYPAD_UP,
+    KEYPAD_DOWN,
+    KEYPAD_LEFT,
+    KEYPAD_RIGHT
+} keypad_state;
+
+typedef void (handle_input)(struct cpu_6502 *p);
+
 struct cpu_6502 {
     uint8_t ram[0x0800];
     uint16_t rPC;
@@ -80,6 +93,10 @@ struct cpu_6502 {
     uint8_t *rom_prg;
 
     struct ppu *ppu;
+    handle_input *handle_input;
+    uint8_t keypad[8];
+    uint8_t strobe;
+    uint8_t keynow;
 };
 
 void page_boundary_chk(struct cpu_6502 *p, uint16_t addr);
@@ -106,6 +123,9 @@ uint16_t addr_zpiy(struct cpu_6502 *p);
 uint16_t addr_idiri(struct cpu_6502 *p);
 uint16_t addr_iidir(struct cpu_6502 *p);
 uint16_t addr_absidir(struct cpu_6502 *p);
+
+void joystick_write(struct cpu_6502 *p, uint8_t val);
+uint8_t joystick_read(struct cpu_6502 *p);
 
 void cpu_handle_intr(struct cpu_6502 *p);
 void cpu_setup(struct cpu_6502 *p);
