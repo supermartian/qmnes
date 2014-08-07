@@ -5,6 +5,7 @@
  * Distributed under terms of the MIT license.
  */
 #include <stdio.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -20,8 +21,11 @@ void load_rom(struct rom *rom, char *filename)
     fstat(rom->rom_fd, &stats);
     int filesize = stats.st_size;
 
-    rom->rom_start = mmap(0, filesize, PROT_READ, MAP_SHARED, rom->rom_fd, 0);
+    uint8_t *romfile = mmap(0, filesize, PROT_READ, MAP_SHARED, rom->rom_fd, 0);
+    rom->rom_start = malloc(sizeof(uint8_t) * filesize);
+    memcpy(rom->rom_start, romfile, sizeof(uint8_t) * filesize);
     printf("Rom loaded:");
+    close(rom->rom_fd);
 
     uint8_t *p = rom->rom_start;
     rom->prg_rom_size = p[4];
