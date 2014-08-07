@@ -18,7 +18,7 @@
 /*
  * Immediate addressing.
  * */
-uint16_t addr_imm8(struct cpu_6502 *p)
+inline uint16_t addr_imm8(struct cpu_6502 *p)
 {
     return p->rPC++;
 }
@@ -26,7 +26,7 @@ uint16_t addr_imm8(struct cpu_6502 *p)
 /*
  * Relative addressing.
  * */
-uint16_t addr_rela(struct cpu_6502 *p)
+inline uint16_t addr_rela(struct cpu_6502 *p)
 {
     uint16_t tmp;
     uint16_t ret = mem_read(p, p->rPC);
@@ -43,7 +43,7 @@ uint16_t addr_rela(struct cpu_6502 *p)
 /*
  * Absolute addressing.
  * */
-uint16_t addr_abs(struct cpu_6502 *p)
+inline uint16_t addr_abs(struct cpu_6502 *p)
 {
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
@@ -55,7 +55,7 @@ uint16_t addr_abs(struct cpu_6502 *p)
 /*
  * Zero page addressing.
  * */
-uint16_t addr_zp(struct cpu_6502 *p)
+inline uint16_t addr_zp(struct cpu_6502 *p)
 {
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
@@ -65,7 +65,7 @@ uint16_t addr_zp(struct cpu_6502 *p)
 /*
  * Absolute indexed by X addressing.
  * */
-uint16_t addr_aix(struct cpu_6502 *p)
+inline uint16_t addr_aix(struct cpu_6502 *p)
 {
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
@@ -79,7 +79,7 @@ uint16_t addr_aix(struct cpu_6502 *p)
 /*
  * Absolute indexed by Y addressing.
  * */
-uint16_t addr_aiy(struct cpu_6502 *p)
+inline uint16_t addr_aiy(struct cpu_6502 *p)
 {
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
@@ -93,7 +93,7 @@ uint16_t addr_aiy(struct cpu_6502 *p)
 /*
  * Zero page indexed by X addressing.
  * */
-uint16_t addr_zpix(struct cpu_6502 *p)
+inline uint16_t addr_zpix(struct cpu_6502 *p)
 {
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
@@ -103,7 +103,7 @@ uint16_t addr_zpix(struct cpu_6502 *p)
 /*
  * Zero page indexed by Y addressing.
  * */
-uint16_t addr_zpiy(struct cpu_6502 *p)
+inline uint16_t addr_zpiy(struct cpu_6502 *p)
 {
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
@@ -113,7 +113,7 @@ uint16_t addr_zpiy(struct cpu_6502 *p)
 /*
  * Indexed indirect addressing.
  * */
-uint16_t addr_idiri(struct cpu_6502 *p)
+inline uint16_t addr_idiri(struct cpu_6502 *p)
 {
     uint16_t ret = mem_read(p, p->rPC);
     p->rPC++;
@@ -126,7 +126,7 @@ uint16_t addr_idiri(struct cpu_6502 *p)
 /*
  * Indirect indexed addressing.
  * */
-uint16_t addr_iidir(struct cpu_6502 *p)
+inline uint16_t addr_iidir(struct cpu_6502 *p)
 {
     uint16_t ret;
     uint16_t tmp = mem_read(p, p->rPC++);
@@ -142,7 +142,7 @@ uint16_t addr_iidir(struct cpu_6502 *p)
  * There's a known bug here. The address doesn't cross pages.
  * http://wiki.nesdev.com/w/index.php/Errata#CPU
  * */
-uint16_t addr_absidir(struct cpu_6502 *p)
+inline uint16_t addr_absidir(struct cpu_6502 *p)
 {
     uint16_t tmp = mem_read(p, p->rPC);
     uint16_t ret;
@@ -286,7 +286,6 @@ void cpu_run(struct cpu_6502 *p)
     uint8_t cycle;
     for (;;)
     {
-        //cpu_dump(p);
         opcode = mem_read(p, p->rPC);
         p->rPC++;
         cycle = cpu_execute_op(p, opcode);
@@ -294,30 +293,31 @@ void cpu_run(struct cpu_6502 *p)
             cpu_handle_intr(p);
         }
 
-        ppu_run(p->ppu, cycle * 3);
-        p->handle_input(p);
+        ppu_run(p->ppu, p, cycle * 3);
     }
 }
 
 void joystick_write(struct cpu_6502 *p, uint8_t val)
 {
-    printf("no\n");
-    if (!(val & 0x1)) {
-        p->strobe = 1;
-    } else if ((val & 0x1) && p->strobe == 1) {
-        p->strobe = 2;
+    if ((val & 0x1)) {
+        p->strobe = 0;
+    } else if (p->strobe == 0 && !(val & 0x1)) {
+        p->strobe = !p->strobe;
     }
 }
 
 uint8_t joystick_read(struct cpu_6502 *p)
 {
-    printf("Reading joystick: %d-%d\n", p->keynow, p->keypad[p->keynow]);
-    if (p->strobe != 2) {
+    uint8_t ret;
+    p->handle_input(p);
+    if (p->strobe == 0) {
         p->keynow = 0;
     }
 
+    //printf("p->keynow %d, p->key %d\n", p->keynow, p->keypad[p->keynow]);
+    ret = p->keypad[p->keynow] ? 0x03 : 0x00; 
     p->keynow = (p->keynow + 1) % 8;
-    return p->keypad[p->keynow] ? 0x03 : 0x00; 
+    return ret;
 }
 
 /*
@@ -353,12 +353,12 @@ void page_boundary_chk(struct cpu_6502 *p, uint16_t addr)
 /*
  * Deal with memory mirroring.
  * */
-uint16_t mem_addr(uint16_t addr)
+inline uint16_t mem_addr(uint16_t addr)
 {
     if (addr < 0x2000) {
-        return addr % 0x0800;
+        return addr & 0x7FF;
     } else if (addr >= 0x2000 && addr < 0x4000) {
-        return ((addr - 0x2000) % 0x8) + 0x2000;
+        return (addr & 0x7) | 0x2000;
     } else {
         return addr;
     }
@@ -367,32 +367,35 @@ uint16_t mem_addr(uint16_t addr)
 /*
  * General memory reading.
  * */
-uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
+inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
 {
     uint16_t addr_ = mem_addr(addr);
+    uint8_t ret = 0;
     if (addr_ < 0x0800) {
-        return p->ram[addr_];
+        ret = p->ram[addr_];
     } else if (addr_ >= 0x2000 && addr_ < 0x2008) {
-        return ppu_read_reg(p->ppu, addr - 0x2000);
+        ret = ppu_read_reg(p->ppu, addr - 0x2000);
     } else if (addr_ == 0x4016) {
-        return joystick_read(p);
+        ret = joystick_read(p);
     } else if (addr_ >= 0x8000) {
-        return p->rom_prg[addr_ - 0x8000];
+        ret = p->rom_prg[addr_ - 0x8000];
     } else {
     }
-    return 0;
+    return ret;
 }
 
 /*
  * General memory writing.
  * */
-uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val)
+inline uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val)
 {
     uint16_t addr_ = mem_addr(addr);
     if (addr_ < 0x0800) {
         p->ram[addr_] = val;
     } else if (addr_ >= 0x2000 && addr_ < 0x2008) {
         ppu_write_reg(p->ppu, addr - 0x2000, val);
+    } else if (addr_ == 0x4014) {
+        ppu_dma(p->ppu, p, val);
     } else if (addr_ == 0x4016) {
         joystick_write(p, val);
     } else if (addr_ >= 0x8000) {
@@ -420,7 +423,7 @@ uint8_t stack_pop(struct cpu_6502 *p)
     return val;
 }
 
-uint8_t set_rp(struct cpu_6502 *p, uint8_t bit, uint8_t val)
+inline void set_rp(struct cpu_6502 *p, uint8_t bit, uint8_t val)
 {
     if (val == 0) {
         p->rP &= ~(1 << bit);
@@ -429,19 +432,19 @@ uint8_t set_rp(struct cpu_6502 *p, uint8_t bit, uint8_t val)
     }
 }
 
-uint8_t get_rp(struct cpu_6502 *p, uint8_t bit)
+inline uint8_t get_rp(struct cpu_6502 *p, uint8_t bit)
 {
     return (p->rP >> bit) & 0x1;
 }
 
-uint8_t read_rp(struct cpu_6502 *p)
+inline uint8_t read_rp(struct cpu_6502 *p)
 {
     p->rP |= 0x20;
     p->rP &= ~(1 << P_B);
     return p->rP;
 }
 
-void write_rp(struct cpu_6502 *p, uint8_t val)
+inline void write_rp(struct cpu_6502 *p, uint8_t val)
 {
     p->rP = val;
 }

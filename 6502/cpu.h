@@ -61,18 +61,19 @@
 #define P_Z 1
 #define P_C 0
 
-typedef enum {
-    KEYPAD_A = 0,
-    KEYPAD_B,
-    KEYPAD_SELECT,
-    KEYPAD_START,
-    KEYPAD_UP,
-    KEYPAD_DOWN,
-    KEYPAD_LEFT,
-    KEYPAD_RIGHT
-} keypad_state;
+#define BIT_SET(x, b, i) x=i==1?(x|(1<<b)):(x&(!(1<<b)))
+#define BIT_GET(x, b) !!(x&(1<<b))
 
-typedef void (handle_input)(struct cpu_6502 *p);
+#define KEYPAD_A 0
+#define KEYPAD_B 1
+#define KEYPAD_SELECT 2
+#define KEYPAD_START 3
+#define KEYPAD_UP 4
+#define KEYPAD_DOWN 5
+#define KEYPAD_LEFT 6
+#define KEYPAD_RIGHT 7
+
+typedef void (*handle_input)(void *p);
 
 struct cpu_6502 {
     uint8_t ram[0x0800];
@@ -93,7 +94,7 @@ struct cpu_6502 {
     uint8_t *rom_prg;
 
     struct ppu *ppu;
-    handle_input *handle_input;
+    handle_input handle_input;
     uint8_t keypad[8];
     uint8_t strobe;
     uint8_t keynow;
@@ -105,7 +106,7 @@ uint8_t mem_read(struct cpu_6502 *p, uint16_t addr);
 uint8_t mem_write(struct cpu_6502 *p, uint16_t addr, uint8_t val);
 void stack_push(struct cpu_6502 *p, uint8_t val);
 uint8_t stack_pop(struct cpu_6502 *p);
-uint8_t set_rp(struct cpu_6502 *p, uint8_t bit, uint8_t val);
+void set_rp(struct cpu_6502 *p, uint8_t bit, uint8_t val);
 uint8_t get_rp(struct cpu_6502 *p, uint8_t bit);
 uint8_t read_rp(struct cpu_6502 *p);
 void write_rp(struct cpu_6502 *p, uint8_t val);
