@@ -19,9 +19,10 @@ SDL_Surface *gScreen = NULL;
 SDL_Renderer *gRender = NULL;
 SDL_Texture *gTexture = NULL;
 
-void input_handler(struct cpu_6502 *p)
+void input_handler(void *cpu)
 {
     SDL_Event event;
+    struct cpu_6502 *p = (struct cpu_6502 *) cpu;
     while(SDL_PollEvent(&event)) {
         switch(event.type) {
             case SDL_KEYDOWN:
