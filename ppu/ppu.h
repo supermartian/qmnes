@@ -8,6 +8,8 @@
 #ifndef __PPU_H__
 #define __PPU_H__
 
+#include "cpu.h"
+
 #include <stdint.h>
 /*
  * PPU memory map
@@ -57,6 +59,7 @@ struct ppu {
 
     uint8_t vram1[0x0F00];
     uint8_t vram2[0x0020];
+    uint8_t oam[0x0100];
 
     uint8_t *rom_chr;
 
@@ -64,8 +67,15 @@ struct ppu {
     uint32_t scanline;
     uint8_t odd_frame;
 
-    uint8_t s_1stwrite;         // Write indicator for scroll
-    uint8_t a_1stwrite;         // Write indicator for addr
+    uint32_t scanline_cycle;
+    uint32_t fc;
+
+    uint16_t rV;
+    uint16_t rT;
+    uint16_t rX;
+    uint8_t w_toggle;         // First write toggle for 2005 and 2006
+    uint8_t sprite0;
+
     renderer *r;
 };
 
@@ -74,9 +84,10 @@ uint8_t vram_read(struct ppu *p, uint16_t addr);
 void vram_write(struct ppu *p, uint16_t addr, uint8_t val);
 uint8_t ppu_read_reg(struct ppu *p, uint16_t addr);
 void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val);
+void ppu_dma(struct ppu *p, struct cpu_6502 *c, uint8_t val);
 
 void ppu_setup(struct ppu *p);
-void ppu_run(struct ppu *p, uint8_t cycle);
+void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle);
 
 #endif /* !__PPU_H__ */
 

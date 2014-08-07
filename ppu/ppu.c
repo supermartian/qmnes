@@ -56,20 +56,24 @@ void ppu_setup(struct ppu *p)
     p->scroll = 0;
     p->addr = 0;
     p->addr = 0;
+    p->scanline_cycle = 0;
+    p->scanline = 0;
+    p->fc = 0;
+    p->odd_frame = 0;
 
-    p->s_1stwrite = 1;
-    p->a_1stwrite = 1;
+    p->w_toggle = 0;
 }
 
 uint8_t ppu_read_reg(struct ppu *p, uint16_t addr)
 {
     switch (addr) {
         case 2:
+            p->w_toggle = 0;
             return p->status;
         case 4:
-            return p->oamd;
+            return p->oam[p->oama];
         case 7:
-            return p->data;
+            return vram_read(p, p->rV);
         default:
             return 0;
     }
@@ -79,7 +83,8 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
 {
     switch (addr) {
         case 0:
-            p->ctl = val;
+            p->rT = val & 0xff;
+            p->rT |= p->rT << 10;
             break;
         case 1:
             p->mask = val;
@@ -88,23 +93,31 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
             p->oama = val;
             break;
         case 4:
-            p->oamd = val;
+            p->oam[p->oama] = val;
+            p->oama++;
             break;
         case 5:
-            if (p->s_1stwrite) {
-                p->scroll = val & 0x00ff;
+            if (!p->w_toggle) {
+                p->rT |= (val & 0xff) >> 3;
+                p->rX = val & 0x7;
+            } else {
+                p->rT |= (val & 0x7) << 12;
+                p->rT |= (val & 0xF8) << 2;
             }
+            p->w_toggle = !p->w_toggle;
             break;
         case 6:
-            if (p->a_1stwrite) {
-                p->addr = 0xff00 & (val << 8);
+            if (!p->w_toggle) {
+                p->rT |= (0x3F & val) << 8;
+                p->rT &= 0x3FFF;
             } else {
-                p->addr |= 0x00ff & val;
-                // Now do the actual read and write
+                p->rT |= val;
+                p->rV = p->rT;
             }
+            p->w_toggle = !p->w_toggle;
             break;
         case 7:
-            p->data = val;
+            vram_write(p, p->rV, val);
             break;
         default:
             break;
@@ -112,10 +125,49 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
     }
 }
 
-void ppu_run(struct ppu *p, uint8_t cycle)
+void ppu_dma(struct ppu *p, struct cpu_6502 *c, uint8_t val)
+{
+    uint16_t addr = val<<8;
+    int i = 0;
+    for (i = 0; i < 256; i++) {
+        p->oam[p->oama] = mem_read(c, addr);
+        p->oama++;
+        addr++;
+    }
+    c->cycle += 256;
+}
+
+void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle)
 {
     int i;
-    for (i = 0; i < 61440; i++)
-        p->frame[i] = random();
-    p->r(p->frame);
+    int max_cycle = 340;
+    /*
+     *for (i = 0; i < 61440; i++)
+     *    p->frame[i] = random();
+     */
+    p->scanline_cycle += cycle;
+    if (p->odd_frame && p->scanline == 0) {
+        max_cycle = 339;
+    }
+
+    if (p->scanline_cycle > max_cycle) {
+        p->scanline_cycle = 0;
+        p->scanline++;
+    }
+
+    if (p->scanline == 242) {
+        BIT_SET(p->ctl, 7, 1);
+        c->nmi = 1;
+    }
+
+    if (p->scanline > 261) {
+        p->fc++;
+        if (p->fc == 60) {
+            printf("frame \n");
+            p->fc = 0;
+        }
+        p->r(p->frame);
+        p->odd_frame = !p->odd_frame;
+        p->scanline = 0;
+    }
 }
