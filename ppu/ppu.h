@@ -57,6 +57,12 @@ struct ppu {
     uint16_t addr;               // write * 2
     uint8_t data;               // write/read
 
+    uint8_t basent;
+    uint8_t vraminc;
+    uint8_t bgt;
+    uint8_t spritet;
+    uint8_t vbi;
+
     uint8_t vram1[0x0F00];
     uint8_t vram2[0x0020];
     uint8_t oam[0x0100];

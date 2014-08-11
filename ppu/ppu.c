@@ -24,7 +24,7 @@ uint8_t vram_read(struct ppu *p, uint16_t addr)
     uint16_t a = vram_addr(addr);
     if (a < 0x2000) {
         return p->rom_chr[a];
-    } else if (a >= 0x2000 && a < 0x3000){
+    } else if (a >= 0x2000 && a < 0x3000) {
         return p->vram1[a];
     } else {
         return p->vram2[a - 0x3F00];
@@ -66,17 +66,21 @@ void ppu_setup(struct ppu *p)
 
 uint8_t ppu_read_reg(struct ppu *p, uint16_t addr)
 {
+    uint8_t ret;
     switch (addr) {
         case 2:
             p->w_toggle = 0;
-            return p->status;
+            ret = p->status;
+            BIT_SET(p->status, 7, 0);
         case 4:
-            return p->oam[p->oama];
+            ret = p->oam[p->oama];
         case 7:
-            return vram_read(p, p->rV);
+            ret = vram_read(p, p->rV);
         default:
-            return 0;
+            ret = 0;
     }
+
+    return ret;
 }
 
 void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
@@ -85,6 +89,11 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
         case 0:
             p->rT = val & 0xff;
             p->rT |= p->rT << 10;
+            p->basent = 0x2000 | ((val & 0x4) << 10);
+            p->vraminc = 1 << ((val & 0x4) << 5);
+            p->bgt = (val & 0x10) >> 1;
+            p->spritet = !!(val & 0x20);
+            p->vbi = val >> 7;
             break;
         case 1:
             p->mask = val;
@@ -141,12 +150,11 @@ void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle)
 {
     int i;
     int max_cycle = 340;
-    /*
-     *for (i = 0; i < 61440; i++)
-     *    p->frame[i] = random();
-     */
     p->scanline_cycle += cycle;
+
+    // Pre-render line
     if (p->odd_frame && p->scanline == 0) {
+        BIT_SET(p->status, 6, 0);
         max_cycle = 339;
     }
 
@@ -156,7 +164,7 @@ void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle)
     }
 
     if (p->scanline == 242) {
-        BIT_SET(p->ctl, 7, 1);
+        BIT_SET(p->status, 7, 1);
         c->nmi = 1;
     }
 

@@ -374,11 +374,11 @@ inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
     if (addr_ < 0x0800) {
         ret = p->ram[addr_];
     } else if (addr_ >= 0x2000 && addr_ < 0x2008) {
-        ret = ppu_read_reg(p->ppu, addr - 0x2000);
+        ret = ppu_read_reg(p->ppu, addr & 0x7);
     } else if (addr_ == 0x4016) {
         ret = joystick_read(p);
     } else if (addr_ >= 0x8000) {
-        ret = p->rom_prg[addr_ - 0x8000];
+        ret = p->rom_prg[addr_ & 0x7FFF];
     } else {
     }
     return ret;
@@ -425,11 +425,7 @@ uint8_t stack_pop(struct cpu_6502 *p)
 
 inline void set_rp(struct cpu_6502 *p, uint8_t bit, uint8_t val)
 {
-    if (val == 0) {
-        p->rP &= ~(1 << bit);
-    } else {
-        p->rP |= 1 << bit;
-    }
+    p->rP = val ? (p->rP | (1 << bit)) : (p->rP & ~(1 << bit));
 }
 
 inline uint8_t get_rp(struct cpu_6502 *p, uint8_t bit)

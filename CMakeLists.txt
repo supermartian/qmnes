@@ -31,6 +31,8 @@ SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -g -O0  -Wall -Wextra")
 # Build paths
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
+set(CMAKE_CXX_FLAGS "-O3")
+
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIR})
 
