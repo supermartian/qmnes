@@ -289,11 +289,12 @@ void cpu_run(struct cpu_6502 *p)
         opcode = mem_read(p, p->rPC);
         p->rPC++;
         cycle = cpu_execute_op(p, opcode);
+        //cpu_dump(p);
+        ppu_run(p->ppu, p, cycle * 3);
         if (p->nmi || p->irq) {
             cpu_handle_intr(p);
         }
 
-        ppu_run(p->ppu, p, cycle * 3);
     }
 }
 
@@ -379,8 +380,8 @@ inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
         ret = joystick_read(p);
     } else if (addr_ >= 0x8000) {
         ret = p->rom_prg[addr_ & 0x7FFF];
-    } else {
     }
+    //printf("memread %x-%x\n", addr, ret);
     return ret;
 }
 

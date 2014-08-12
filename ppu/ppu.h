@@ -92,6 +92,8 @@ uint8_t ppu_read_reg(struct ppu *p, uint16_t addr);
 void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val);
 void ppu_dma(struct ppu *p, struct cpu_6502 *c, uint8_t val);
 
+void ppu_render_scanline(struct ppu *p);
+
 void ppu_setup(struct ppu *p);
 void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle);
 

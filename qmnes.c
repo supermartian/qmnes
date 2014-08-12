@@ -118,7 +118,7 @@ void graphic_init()
     gRender = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     gScreen = SDL_GetWindowSurface(gWindow);
-    gTexture = SDL_CreateTexture(gRender, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 256, 240);
+    gTexture = SDL_CreateTexture(gRender, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 240);
 }
 
 void sighdl(int sig)
