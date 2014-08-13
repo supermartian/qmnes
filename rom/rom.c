@@ -30,6 +30,10 @@ void load_rom(struct rom *rom, char *filename)
     uint8_t *p = rom->rom_start;
     rom->prg_rom_size = p[4];
     rom->chr_rom_size = p[8];
+    rom->rom_mirroring = p[6] & 0x05;
+    if (rom->rom_mirroring >> 3) {
+        rom->rom_mirroring = 2;
+    }
 
     printf("rom size %d, Prog size %d, CHR size %d\n", filesize, p[4], p[8]);
 

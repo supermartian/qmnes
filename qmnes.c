@@ -145,15 +145,15 @@ int main(int argc, char **argv)
     char *filename = argv[1];
 
     struct rom test_rom;
-    struct cpu_6502 cpu;
-    struct ppu ppu;
+    struct cpu_6502 *cpu = malloc(sizeof(struct cpu_6502));
+    struct ppu *ppu = malloc(sizeof(struct ppu));
 
     // Init cpu and ppu.
-    cpu_setup(&cpu);
-    ppu_setup(&ppu);
-    cpu.ppu = &ppu;
-    cpu.handle_input = input_handler;
-    ppu.r = render;
+    cpu_setup(cpu);
+    ppu_setup(ppu);
+    cpu->ppu = ppu;
+    cpu->handle_input = input_handler;
+    ppu->r = render;
 
     // Get ready for SDL.
     graphic_init();
@@ -164,11 +164,12 @@ int main(int argc, char **argv)
 
     // Loads the rom and sets the cpu and ppu memory mapping.
     load_rom(&test_rom, filename);
-    cpu.rom_prg = test_rom.prg_rom_data;
-    ppu.rom_chr = test_rom.chr_rom_data;
+    cpu->rom_prg = test_rom.prg_rom_data;
+    ppu->rom_chr = test_rom.chr_rom_data;
+    ppu->rom_mirroring = test_rom.rom_mirroring;
 
-    cpu_reset(&cpu);
-    cpu_run(&cpu);
+    cpu_reset(cpu);
+    cpu_run(cpu);
 
     return 0;
 }

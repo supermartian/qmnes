@@ -18,6 +18,7 @@ struct rom {
     uint8_t *chr_rom_data;
 
     uint8_t *rom_start;
+    uint8_t rom_mirroring;
     int rom_fd;
 };
 

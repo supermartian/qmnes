@@ -63,18 +63,19 @@ struct ppu {
     uint8_t spritet;
     uint8_t vbi;
 
-    uint8_t vram1[0x0F00];
+    uint8_t vram1[0x1000];
     uint8_t vram2[0x0020];
     uint8_t oam[0x0100];
 
     uint8_t *rom_chr;
+    uint8_t rom_mirroring;
 
     uint32_t frame[61440];
     uint32_t scanline;
     uint8_t odd_frame;
 
     uint32_t scanline_cycle;
-    uint32_t fc;
+    uint32_t *current_scanline_frame;
 
     uint16_t rV;
     uint16_t rT;
@@ -85,17 +86,25 @@ struct ppu {
     renderer *r;
 };
 
-uint16_t vram_addr(uint16_t addr);
+uint16_t vram_addr(struct ppu *p, uint16_t addr);
 uint8_t vram_read(struct ppu *p, uint16_t addr);
 void vram_write(struct ppu *p, uint16_t addr, uint8_t val);
 uint8_t ppu_read_reg(struct ppu *p, uint16_t addr);
 void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val);
 void ppu_dma(struct ppu *p, struct cpu_6502 *c, uint8_t val);
 
-void ppu_render_scanline(struct ppu *p);
+uint16_t get_tile_addr(struct ppu *p);
+uint16_t get_attr_addr(struct ppu *p);
+void ppu_inc_x(struct ppu *p);
+void ppu_inc_y(struct ppu *p);
+
+void ppu_render_scanline_background(struct ppu *p);
+void ppu_render_scanline_sprite(struct ppu *p);
 
 void ppu_setup(struct ppu *p);
 void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle);
+
+void nametabel_dump(struct ppu *p);
 
 #endif /* !__PPU_H__ */
 
