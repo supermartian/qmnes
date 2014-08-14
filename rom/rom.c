@@ -29,17 +29,18 @@ void load_rom(struct rom *rom, char *filename)
 
     uint8_t *p = rom->rom_start;
     rom->prg_rom_size = p[4];
-    rom->chr_rom_size = p[8];
+    rom->chr_rom_size = p[5];
     rom->rom_mirroring = p[6] & 0x05;
     if (rom->rom_mirroring >> 3) {
         rom->rom_mirroring = 2;
     }
 
-    printf("rom size %d, Prog size %d, CHR size %d\n", filesize, p[4], p[8]);
+    printf("rom size %d, Prog size %d, CHR size %d\n", filesize, p[4], p[5]);
 
     rom->prg_rom_data = rom->rom_start + 16;
     rom->chr_rom_data = rom->prg_rom_data + 16384 * rom->prg_rom_size;
     printf("Prog size %x\n", rom->prg_rom_data);
+    printf("Prog size %d\n", rom->chr_rom_data - rom->rom_start);
 }
 
 void unload_rom(struct rom *rom)

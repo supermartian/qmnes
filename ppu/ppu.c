@@ -13,25 +13,28 @@ uint32_t color_table[] = {0x525252, 0xB40000, 0xA00000, 0xB1003D, 0x740069, 0x00
 uint16_t vram_addr(struct ppu *p, uint16_t addr)
 {
 
+    uint16_t ret;
     if (addr >= 0x2000 && addr < 0x3000) {
         switch (p->rom_mirroring) {
             case 0:
                 // vertical arrangement/horizontal mirroring
-                return addr & 0x2BFF;
+                ret = addr & 0x2BFF;
             case 1:
                 // horizontal arrangement/vertical mirroring
-                return addr & 0x27FF;
+                ret = addr & 0x27FF;
             default:
                 // HOLY SHIT might be four screen mirroring
-                return addr;
+                ret = addr;
         }
+        printf("addr %x\n", ret);
     } else if (addr >= 0x3000 && addr < 0x3F00) {
-        return vram_addr(p, addr - 0x1000);
+        ret = vram_addr(p, addr - 0x1000);
     } else if (addr >= 0x3F00 && addr < 0x4000) {
-        return (addr - 0x3F00) % 0x20 + 0x3F00;
+        ret = (addr - 0x3F00) % 0x20 + 0x3F00;
     } else {
-        return addr;
+        ret = addr;
     }
+    return ret;
 }
 
 uint8_t vram_read(struct ppu *p, uint16_t addr)
@@ -50,8 +53,10 @@ void vram_write(struct ppu *p, uint16_t addr, uint8_t val)
 {
     uint16_t a = vram_addr(p, addr);
     if (a < 0x2000) {
-        p->rom_chr[a] = val;
+        printf("kidding me?\n");
+     //   p->rom_chr[a] = val;
     } else if (a >= 0x2000 && a < 0x3000){
+        //printf("[%2x %2x]\n", p->rV, val);
         p->vram1[a - 0x2000] = val;
     } else {
         p->vram2[a - 0x3F00] = val;
@@ -112,8 +117,9 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
             p->rT |= p->rT << 10;
             p->basent = 0x2000 | ((vv & 0x4) << 10);
             p->vraminc = 1 << ((vv & 0x4) << 5);
-            p->bgt = (vv & 0x10) >> 1;
-            p->spritet = !!(vv & 0x20);
+            p->bgt = !!(vv & 0x10);
+            p->spritet = !!(vv & 0x08);
+            p->spritesz = !!(vv & 0x20);
             p->vbi = vv >> 7;
             break;
         case 1:
@@ -138,17 +144,19 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
             break;
         case 6:
             if (!p->w_toggle) {
-                p->rT |= vv;
-                p->rT = (p->rT << 8) & 0x3FFF;
+                p->rT |= (0x00FF & vv) << 8;
+                p->addr = p->rT;
             } else {
-                p->rT |= vv;
+                p->rT |= 0x00FF & vv;
+                p->rT &= 0x3FFF;
                 p->rV = p->rT;
+                p->addr = p->rT;
             }
             p->w_toggle = !p->w_toggle;
             break;
         case 7:
-            vram_write(p, p->rV, val);
-            p->rV += p->vraminc;
+            vram_write(p, p->addr, val);
+            p->addr += p->vraminc;
             break;
         default:
             break;
@@ -214,7 +222,7 @@ void ppu_render_scanline_background(struct ppu *p)
 {
     uint32_t *line = p->current_scanline_frame;
     uint8_t tile, attr;
-    uint8_t tile_line1, tile_line2;
+    uint16_t tile_line1, tile_line2;
     int i, j, k;
     uint32_t pixelidx;
     uint32_t color[] = {0, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF};
@@ -223,7 +231,6 @@ void ppu_render_scanline_background(struct ppu *p)
     for (i = 0; i < 32; i++) {
         tile = vram_read(p, get_tile_addr(p));
         attr = vram_read(p, get_attr_addr(p));
-        //printf("tile addr %x\n", tile);
         tile_line1 = p->rom_chr[tile];
         tile_line2 = p->rom_chr[tile+8];
         for (j = 7; j > 0; j--) {
@@ -232,26 +239,26 @@ void ppu_render_scanline_background(struct ppu *p)
             pixelidx &= 0x3;
             line[j] = color[pixelidx];
         }
-        ppu_inc_x(p);
         line += 8;
     }
-    p->rV = p->rT;
-//    printf("\n");
-    ppu_inc_y(p);
 }
 
 void ppu_render_scanline_sprite(struct ppu *p)
 {
-    // Background
     // Sprite
-    int i;
+    uint32_t *line = p->current_scanline_frame;
+    int i, j;
     int k = 0;
     int current[8];
     int current_oam;
+    uint16_t tile1, tile2;
+    uint16_t tileaddr;
+    uint32_t x;
+    uint32_t color[4];
     // Linear search for sprites in current scanline, pretty much like the secondary OAM does
     for (i = 0; i < 64 && k < 8; i++) {
         if ((p->oam[i<<2] <= (p->scanline - 1)) &&
-                ((p->scanline - 1) < p->oam[i<<2] + (8 << p->spritet))) {
+                ((p->scanline - 1) < p->oam[i<<2] + (8 << p->spritesz))) {
             current[k] = i;
             k++;
             if (i == 0) {
@@ -265,14 +272,42 @@ void ppu_render_scanline_sprite(struct ppu *p)
         p->status |= 0x20;
     }
 
+    uint8_t fx, fy;
+    uint8_t palette;
+
     for (i = 0 ; i < k ; i++) {
         current_oam = current[i];
-        if (p->spritet) {
+        x = p->oam[(current_oam<<2) + 3];
+        fx = p->oam[(current_oam<<2) + 2] & 0x40;
+        fy = p->oam[(current_oam<<2) + 2] & 0x80;
+
+        palette = p->oam[(current_oam<<2) + 2] & 0x3;
+        color[0] = 0;
+        color[1] = color_table[p->vram2[(palette<<2) + 0x10]];
+        color[2] = color_table[p->vram2[(palette<<2) + 0x11]];
+        color[3] = color_table[p->vram2[(palette<<2) + 0x12]];
+        if (p->spritesz) {
             // 8x16
-            memset(p->frame + ((p->scanline - 1) * 256 + p->oam[(current_oam<<2)+3]), random(), 8*sizeof(uint32_t));
         } else {
-            memset(p->frame + ((p->scanline - 1) * 256 + p->oam[(current_oam<<2)+3]), random(), 8*(sizeof(uint32_t)));
-            // 8x8
+            tileaddr = p->oam[(current_oam<<2) + 1];
+            tileaddr = (tileaddr << 4);
+            tileaddr = p->spritet ? tileaddr | 0x1000 : tileaddr;
+            if (fy) {
+                tileaddr += 8 - (p->scanline - 1 - p->oam[current_oam<<2]);
+            } else {
+                tileaddr += p->scanline - 1 - p->oam[current_oam<<2];
+            }
+            tile1 = vram_read(p, tileaddr);
+            tile2 = vram_read(p, tileaddr + 8);
+            if (fx) {
+                for (j = 7; j >=0; j--){
+                    line[x + j] = color[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
+                }
+            } else {
+                for (j = 7; j >=0; j--){
+                    line[x + 7 - j] = color[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
+                }
+            }
         }
     }
 }
@@ -281,11 +316,14 @@ void nametabel_dump(struct ppu *p)
 {
     int i, j, k;
     printf("==============\n");
+    for (k = 0; k < 4; k++) {
     for (i = 0; i < 30; i++) {
         for (j = 0; j < 32; j++) {
-            printf("%2x ", p->vram1[i*32+j]);
+            printf("%2x ", p->vram1[k * 32*32 + i*32+j]);
         }
         printf("\n");
+    }
+        printf("==================[%d]=================\n", k);
     }
 }
 
@@ -326,7 +364,6 @@ void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle)
             memset(p->frame, 0, 61440 * sizeof(uint32_t));
             p->odd_frame = !p->odd_frame;
             p->scanline = 0;
-            //nametabel_dump(p);
         }
         p->scanline_cycle = 0;
         p->scanline++;
