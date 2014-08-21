@@ -290,7 +290,10 @@ void cpu_run(struct cpu_6502 *p)
         p->rPC++;
         cycle = cpu_execute_op(p, opcode);
         //cpu_dump(p);
-        ppu_run(p->ppu, p, cycle * 3);
+        if (p->cycle >= 29658 && p->ppu->ppu_ready == 0) {
+            p->ppu->ppu_ready = 1;
+        }
+        ppu_run(p->ppu, p, cycle);
         if (p->nmi || p->irq) {
             cpu_handle_intr(p);
         }

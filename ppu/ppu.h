@@ -53,16 +53,19 @@ struct ppu {
     uint8_t status;             // read 
     uint8_t oama;               // write
     uint8_t oamd;               // write/read
-    uint16_t scroll;             // write * 2
-    uint16_t addr;               // write * 2
+    uint16_t scrollx;             // write * 2
+    uint16_t scrolly;             // write * 2
+    uint16_t addr;               // write/read
     uint8_t data;               // write/read
 
     uint16_t basent;
-    uint8_t vraminc;
-    uint8_t spritet;
-    uint8_t bgt;
-    uint8_t spritesz;
-    uint8_t vbi;
+    uint16_t vraminc;
+    uint16_t spritet;
+    uint16_t bgt;
+    uint16_t spritesz;
+    uint16_t vbi;
+
+    uint16_t scroll;
 
     uint8_t vram1[0x1000];
     uint8_t vram2[0x0020];
@@ -84,6 +87,8 @@ struct ppu {
     uint8_t w_toggle;         // First write toggle for 2005 and 2006
     uint8_t sprite0;
 
+    uint8_t ppu_ready;
+
     renderer *r;
 };
 
@@ -96,8 +101,9 @@ void ppu_dma(struct ppu *p, struct cpu_6502 *c, uint8_t val);
 
 uint16_t get_tile_addr(struct ppu *p);
 uint16_t get_attr_addr(struct ppu *p);
-void ppu_inc_x(struct ppu *p);
+
 void ppu_inc_y(struct ppu *p);
+void ppu_inc_x(struct ppu *p);
 
 void ppu_render_scanline_background(struct ppu *p);
 void ppu_render_scanline_sprite(struct ppu *p);

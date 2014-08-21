@@ -166,6 +166,7 @@ int main(int argc, char **argv)
     load_rom(&test_rom, filename);
     cpu->rom_prg = test_rom.prg_rom_data;
     ppu->rom_chr = test_rom.chr_rom_data;
+    printf("chr rom %x\n", ppu->rom_chr);
     ppu->rom_mirroring = test_rom.rom_mirroring;
 
     cpu_reset(cpu);

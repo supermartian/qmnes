@@ -8,31 +8,95 @@
 #include "ppu.h"
 
 
-uint32_t color_table[] = {0x525252, 0xB40000, 0xA00000, 0xB1003D, 0x740069, 0x00005B, 0x00005F, 0x001840, 0x002F10, 0x084A08, 0x006700, 0x124200, 0x6D2800, 0x000000, 0x000000, 0x000000, 0xC4D5E7, 0xFF4000, 0xDC0E22, 0xFF476B, 0xD7009F, 0x680AD7, 0x0019BC, 0x0054B1, 0x006A5B, 0x008C03, 0x00AB00, 0x2C8800, 0xA47200, 0x000000, 0x000000, 0x000000, 0xF8F8F8, 0xFFAB3C, 0xFF7981, 0xFF5BC5, 0xFF48F2, 0xDF49FF, 0x476DFF, 0x00B4F7, 0x00E0FF, 0x00E375, 0x03F42B, 0x78B82E, 0xE5E218, 0x787878, 0x000000, 0x000000, 0xFFFFFF, 0xFFF2BE, 0xF8B8B8, 0xF8B8D8, 0xFFB6FF, 0xFFC3FF, 0xC7D1FF, 0x9ADAFF, 0x88EDF8, 0x83FFDD, 0xB8F8B8, 0xF5F8AC, 0xFFFFB0, 0xF8D8F8, 0x000000, 0x000000};
+static const uint32_t color_table[] = {
+0x7C7C7C
+,0x0000FC
+,0x0000BC
+,0x4428BC
+,0x940084
+,0xA80020
+,0xA81000
+,0x881400
+,0x503000
+,0x007800
+,0x006800
+,0x005800
+,0x004058
+,0x000000
+,0x000000
+,0x000000
+,0xBCBCBC
+,0x0078F8
+,0x0058F8
+,0x6844FC
+,0xD800CC
+,0xE40058
+,0xF83800
+,0xE45C10
+,0xAC7C00
+,0x00B800
+,0x00A800
+,0x00A844
+,0x008888
+,0x000000
+,0x000000
+,0x000000
+,0xF8F8F8
+,0x3CBCFC
+,0x6888FC
+,0x9878F8
+,0xF878F8
+,0xF85898
+,0xF87858
+,0xFCA044
+,0xF8B800
+,0xB8F818
+,0x58D854
+,0x58F898
+,0x00E8D8
+,0x787878
+,0x000000
+,0x000000
+,0xFCFCFC
+,0xA4E4FC
+,0xB8B8F8
+,0xD8B8F8
+,0xF8B8F8
+,0xF8A4C0
+,0xF0D0B0
+,0xFCE0A8
+,0xF8D878
+,0xD8F878
+,0xB8F8B8
+,0xB8F8D8
+,0x00FCFC
+,0xF8D8F8
+,0x000000
+,0x000000
+};
 
 uint16_t vram_addr(struct ppu *p, uint16_t addr)
 {
-
-    uint16_t ret;
-    if (addr >= 0x2000 && addr < 0x3000) {
-        switch (p->rom_mirroring) {
-            case 0:
-                // vertical arrangement/horizontal mirroring
-                ret = addr & 0x2BFF;
-            case 1:
-                // horizontal arrangement/vertical mirroring
-                ret = addr & 0x27FF;
-            default:
-                // HOLY SHIT might be four screen mirroring
-                ret = addr;
+    uint16_t ret = addr;
+    if (addr >= 0x2400 && addr < 0x2800) {
+        if (!p->rom_mirroring) {
+            ret = addr - 0x400;
         }
-        printf("addr %x\n", ret);
+    } else if (addr >= 0x2800 && addr < 0x2C00) {
+        if (p->rom_mirroring) {
+            ret = addr - 0x800;
+        }
+    } else if (addr >= 0x2C00 && addr < 0x3000) {
+        if (p->rom_mirroring) {
+            ret = addr - 0x800;
+        } else {
+            ret = addr - 0x400;
+        }
     } else if (addr >= 0x3000 && addr < 0x3F00) {
         ret = vram_addr(p, addr - 0x1000);
-    } else if (addr >= 0x3F00 && addr < 0x4000) {
-        ret = (addr - 0x3F00) % 0x20 + 0x3F00;
+    } else if (addr >= 0x3F20 && addr < 0x4000) {
+        ret = addr & 0x3F1F;
     } else {
-        ret = addr;
     }
     return ret;
 }
@@ -44,8 +108,10 @@ uint8_t vram_read(struct ppu *p, uint16_t addr)
         return p->rom_chr[a];
     } else if (a >= 0x2000 && a < 0x3000) {
         return p->vram1[a - 0x2000];
-    } else {
+    } else if (a >= 0x3F00 && a < 0x3F20) {
         return p->vram2[a - 0x3F00];
+    } else {
+        printf("Impossible read %x\n", a);
     }
 }
 
@@ -53,14 +119,87 @@ void vram_write(struct ppu *p, uint16_t addr, uint8_t val)
 {
     uint16_t a = vram_addr(p, addr);
     if (a < 0x2000) {
-        printf("kidding me?\n");
-     //   p->rom_chr[a] = val;
-    } else if (a >= 0x2000 && a < 0x3000){
-        //printf("[%2x %2x]\n", p->rV, val);
+    } else if (a >= 0x2000 && a < 0x3000) {
         p->vram1[a - 0x2000] = val;
-    } else {
+    } else if (a >= 0x3F00 && a < 0x3F20) {
         p->vram2[a - 0x3F00] = val;
+    } else {
+        printf("Impossible write %x %x\n", a, val);
     }
+}
+
+void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
+{
+    uint16_t vv = val;
+    switch (addr) {
+        case 0:
+            p->basent = (vv & 0x3 << 10) | 0x2000;
+            p->vraminc = (vv & 0x4) ? 32 : 1;
+            p->spritet = (vv & 0x8) ? 0x1000 : 0;
+            p->bgt = (vv & 0x10) ? 0x1000 : 0;
+            p->spritesz = (vv & 0x20) ? 1 : 0;
+            p->vbi = (vv >> 7) & 0x1;
+            break;
+        case 1:
+            p->mask = val;
+            break;
+        case 3:
+            p->oama = val;
+            break;
+        case 4:
+            p->oam[p->oama] = val;
+            break;
+        case 5:
+            if (!p->w_toggle) {
+                p->scrollx = val;
+            } else {
+                p->scrolly = val;
+                p->scroll = p->scrollx >> 3;
+                p->scroll |= (p->scrolly & 0x7) << 12;
+                p->scroll |= (p->scrolly & 0xF8) << 5;
+                p->scroll |= p->basent;
+                p->scroll &= 0x3FFF;
+            }
+            p->w_toggle = !p->w_toggle;
+            break;
+        case 6:
+            if (!p->w_toggle) {
+                p->addr = vv;
+            } else {
+                p->addr = (p->addr << 8) + val;
+                p->addr &= 0x3FFF;
+            }
+            p->w_toggle = !p->w_toggle;
+            break;
+        case 7:
+            vram_write(p, p->addr, val);
+            p->addr += p->vraminc;
+            p->addr &= 0x3FFF;
+            break;
+    }
+}
+
+uint8_t ppu_read_reg(struct ppu *p, uint16_t addr)
+{
+    uint8_t ret = 0;
+    switch (addr) {
+        case 2:
+            ret = p->status;
+            p->w_toggle = 0;
+            break;
+        case 4:
+            ret = p->oam[p->oama];
+            break;
+        case 7:
+            ret = vram_read(p, p->addr);
+            p->addr += p->vraminc;
+            p->addr &= 0x3FFF;
+            break;
+        default:
+            break;
+    }
+
+    return ret;
 }
 
 void ppu_setup(struct ppu *p)
@@ -73,94 +212,14 @@ void ppu_setup(struct ppu *p)
     p->status = 0;
     p->oama = 0;
     p->oamd = 0;
-    p->scroll = 0;
-    p->addr = 0;
-    p->addr = 0;
+    p->scrollx = 0;
+    p->scrolly = 0;
     p->scanline_cycle = 0;
     p->scanline = 0;
     p->odd_frame = 0;
+    p->ppu_ready = 0;
 
     p->w_toggle = 0;
-}
-
-uint8_t ppu_read_reg(struct ppu *p, uint16_t addr)
-{
-    uint8_t ret;
-    switch (addr) {
-        case 2:
-            p->w_toggle = 0;
-            ret = p->status;
-            BIT_SET(p->status, 7, 0);
-            break;
-        case 4:
-            ret = p->oam[p->oama];
-            break;
-        case 7:
-            ret = vram_read(p, p->rV);
-            p->rV += p->vraminc;
-            break;
-        default:
-            ret = 0;
-            break;
-    }
-
-    return ret;
-}
-
-void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
-{
-    p->status |= val & 0x1F;
-    uint16_t vv = val;
-    switch (addr) {
-        case 0:
-            p->rT = val & 0xff;
-            p->rT |= p->rT << 10;
-            p->basent = 0x2000 | ((vv & 0x4) << 10);
-            p->vraminc = 1 << ((vv & 0x4) << 5);
-            p->bgt = !!(vv & 0x10);
-            p->spritet = !!(vv & 0x08);
-            p->spritesz = !!(vv & 0x20);
-            p->vbi = vv >> 7;
-            break;
-        case 1:
-            p->mask = val;
-            break;
-        case 3:
-            p->oama = val;
-            break;
-        case 4:
-            p->oam[p->oama] = val;
-            p->oama++;
-            break;
-        case 5:
-            if (!p->w_toggle) {
-                p->rT |= (vv & 0xff) >> 3;
-                p->rX = vv & 0x7;
-            } else {
-                p->rT |= (vv & 0x7) << 12;
-                p->rT |= (vv & 0xF8) << 2;
-            }
-            p->w_toggle = !p->w_toggle;
-            break;
-        case 6:
-            if (!p->w_toggle) {
-                p->rT |= (0x00FF & vv) << 8;
-                p->addr = p->rT;
-            } else {
-                p->rT |= 0x00FF & vv;
-                p->rT &= 0x3FFF;
-                p->rV = p->rT;
-                p->addr = p->rT;
-            }
-            p->w_toggle = !p->w_toggle;
-            break;
-        case 7:
-            vram_write(p, p->addr, val);
-            p->addr += p->vraminc;
-            break;
-        default:
-            break;
-    }
 }
 
 void ppu_dma(struct ppu *p, struct cpu_6502 *c, uint8_t val)
@@ -177,70 +236,57 @@ void ppu_dma(struct ppu *p, struct cpu_6502 *c, uint8_t val)
 
 void ppu_inc_x(struct ppu *p)
 {
-    int v = p->rV;
-    if ((v & 0x001F) == 31) {
-        v &= ~0x001F;
-        v ^= 0x0400;
+    if ((p->scroll & 0x1F) == 0x1F) {
+        p->scroll &= 0xFFE0;
+        p->scroll ^= 0x0400;
     } else {
-        v += 1;
+        p->scroll++;
     }
-    p->rV = v;
 }
 
 void ppu_inc_y(struct ppu *p)
 {
-    uint16_t y = (p->rV & 0x03E0) >> 5;
-    if ((p->rV & 0x7000) != 0x7000) {
-        p->rV += 0x1000;
+    if (((p->scroll >> 5) & 0x1F) == 0x1E) {
+        p->scroll &= 0xFC1F;
+        p->scroll ^= 0x0800;
     } else {
-        p->rV &= ~0x7000;
-        if (y == 29) {
-            y = (p->rV & 0x03E0) >> 5;
-            y = 0;
-            p->rV  ^= 0x0800;
-        } else if (y == 31) {
-            y = 0;
-        } else {
-            y += 1;
-            p->rV = (p->rV & ~0x03E0) | (y << 5);
-        }
+        p->scroll += 0x20;
     }
-    p->rV &= 0x0FFF;
-}
-
-uint16_t get_tile_addr(struct ppu *p)
-{
-    return 0x2000 | (p->rV & 0x0FFF);
-}
-
-uint16_t get_attr_addr(struct ppu *p)
-{
-    return 0x23C0 | (p->rV & 0x0C00) | ((p->rV >> 4) & 0x38) | ((p->rV >> 2) & 0x07);
 }
 
 void ppu_render_scanline_background(struct ppu *p)
 {
     uint32_t *line = p->current_scanline_frame;
-    uint8_t tile, attr;
-    uint16_t tile_line1, tile_line2;
-    int i, j, k;
-    uint32_t pixelidx;
-    uint32_t color[] = {0, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF};
+    uint16_t scroll_addr;
+    uint16_t fine_x = p->scrollx & 0x7;
+    uint16_t tile_addr;
+    uint16_t tile1;
+    uint16_t tile2;
+    uint32_t color[] = {0, 0xFF0000, 0x00FF00, 0X0000FF};
 
-    line -= p->rX;
+    int i, j;
+
+    line -= p->scrollx & 0x7;
     for (i = 0; i < 32; i++) {
-        tile = vram_read(p, get_tile_addr(p));
-        attr = vram_read(p, get_attr_addr(p));
-        tile_line1 = p->rom_chr[tile];
-        tile_line2 = p->rom_chr[tile+8];
-        for (j = 7; j > 0; j--) {
-            pixelidx = tile_line1 >> j;
-            pixelidx |= (tile_line2 >> j) << 1;
-            pixelidx &= 0x3;
-            line[j] = color[pixelidx];
+        tile_addr = vram_read(p, p->scroll);
+        tile_addr <<= 4;
+        tile_addr |= p->bgt;
+        tile_addr += p->scanline % 8;
+        tile1 = vram_read(p, tile_addr);
+        tile2 = vram_read(p, (tile_addr + 8));
+        for (j = 7; j >= 0; j--) {
+            line[7 - j] = color_table[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
         }
         line += 8;
+        printf("%x ", p->scroll);
+        ppu_inc_x(p);
     }
+    // Reset x scroll
+    p->scroll ^= 0x0400;
+    if (!(p->scanline % 8)) {
+        ppu_inc_y(p);
+    }
+    printf("\n");
 }
 
 void ppu_render_scanline_sprite(struct ppu *p)
@@ -250,7 +296,7 @@ void ppu_render_scanline_sprite(struct ppu *p)
     int i, j;
     int k = 0;
     int current[8];
-    int current_oam;
+    uint16_t current_oam;
     uint16_t tile1, tile2;
     uint16_t tileaddr;
     uint32_t x;
@@ -261,10 +307,6 @@ void ppu_render_scanline_sprite(struct ppu *p)
                 ((p->scanline - 1) < p->oam[i<<2] + (8 << p->spritesz))) {
             current[k] = i;
             k++;
-            if (i == 0) {
-                // Sprite 0 hit
-                p->status |= 0x40;
-            }
         }
     }
 
@@ -273,7 +315,7 @@ void ppu_render_scanline_sprite(struct ppu *p)
     }
 
     uint8_t fx, fy;
-    uint8_t palette;
+    uint16_t palette;
 
     for (i = 0 ; i < k ; i++) {
         current_oam = current[i];
@@ -283,9 +325,9 @@ void ppu_render_scanline_sprite(struct ppu *p)
 
         palette = p->oam[(current_oam<<2) + 2] & 0x3;
         color[0] = 0;
-        color[1] = color_table[p->vram2[(palette<<2) + 0x10]];
-        color[2] = color_table[p->vram2[(palette<<2) + 0x11]];
-        color[3] = color_table[p->vram2[(palette<<2) + 0x12]];
+        color[1] = color_table[vram_read(p, (palette<<2) + 0x3F11)];
+        color[2] = color_table[vram_read(p, (palette<<2) + 0x3F12)];
+        color[3] = color_table[vram_read(p, (palette<<2) + 0x3F13)];
         if (p->spritesz) {
             // 8x16
         } else {
@@ -302,10 +344,18 @@ void ppu_render_scanline_sprite(struct ppu *p)
             if (fx) {
                 for (j = 7; j >=0; j--){
                     line[x + j] = color[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
+                    if (i == 0 && !line[x+j]) {
+                        // Sprite 0 hit
+                        p->status |= 0x40;
+                    }
                 }
             } else {
                 for (j = 7; j >=0; j--){
                     line[x + 7 - j] = color[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
+                    if (i == 0 && !line[x+7-j]) {
+                        // Sprite 0 hit
+                        p->status |= 0x40;
+                    }
                 }
             }
         }
@@ -332,6 +382,10 @@ void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle)
     int i;
     int max_cycle = 340;
 
+    if (!p->ppu_ready) {
+        return;
+    }
+
     // Pre-render scanline has a variable cycle count
     if (p->scanline == 0 && p->odd_frame) {
         max_cycle = 339;
@@ -349,7 +403,8 @@ void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle)
     // Since most of the games don't do the "mid-scanline" rendering, it's just OK
     if (p->scanline_cycle >= max_cycle) {
 
-        if (p->scanline < 241 && p->scanline > 0) {
+        if (p->scanline == 1) {
+        } else if (p->scanline < 241 && p->scanline > 0) {
             p->current_scanline_frame = p->frame + (p->scanline - 1) * 256;
             if (p->mask & 0x08) {
                 ppu_render_scanline_background(p);

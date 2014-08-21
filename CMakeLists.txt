@@ -24,14 +24,14 @@ endif()
 SET(CMAKE_BUILD_TYPE Release CACHE STRING "")
 
 # - flags
-SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -ggdb -O0  -Wall -Wextra -DDEBUG")
+SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -O0  -Wall -Wextra -DDEBUG")
 
 SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -g -O0  -Wall -Wextra")
 
 # Build paths
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
-set(CMAKE_CXX_FLAGS "-O3")
+set(CMAKE_CXX_FLAGS "-O0 -g")
 
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIR})
@@ -61,7 +61,7 @@ add_executable(test
     6502/ins.c
     ppu/ppu.c
     rom/rom.c)
-message(STATUS "${SDL2_LIBRARY} -- ${SDL2_INCLUDE_DIR}")
+message(STATUS "${CMAKE_CXX_FLAGS}")
 target_link_libraries(qmnes ${SDL2_LIBRARY})
 
 #cpack stuff goes here
