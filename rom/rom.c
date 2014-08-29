@@ -30,8 +30,19 @@ void load_rom(struct rom *rom, char *filename)
     uint8_t *p = rom->rom_start;
     rom->prg_rom_size = p[4];
     rom->chr_rom_size = p[5];
-    rom->rom_mirroring = p[6] & 0x05;
-    if (rom->rom_mirroring >> 3) {
+    switch (p[6] & 0x9) {
+        case 0x0:
+            rom->rom_mirroring = 0;
+            break;
+        case 0x1:
+            rom->rom_mirroring = 1;
+            break;
+        case 0x8:
+        case 0x9:
+            rom->rom_mirroring = 2;
+            break;
+    }
+    if (0x1 & (rom->rom_mirroring >> 3)) {
         rom->rom_mirroring = 2;
     }
 

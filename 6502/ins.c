@@ -831,6 +831,7 @@ inline void ins_lax(struct cpu_6502 *p, uint16_t addr)
 
 inline void ins_unknown(struct cpu_6502 *p, uint16_t addr)
 {
+    cpu_dump(p);
     printf("Unknown instruction, emergency out\n");
 //    exit(0);
 }
