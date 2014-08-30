@@ -272,8 +272,10 @@ void ppu_render_scanline_background(struct ppu *p)
     uint16_t tile_addr;
     uint16_t tile1;
     uint16_t tile2;
+    uint16_t attr_addr;
+    uint16_t attr;
     uint8_t palette;
-    uint32_t color[] = {0, 0xFF0000, 0x00FF00, 0X0000FF};
+    uint32_t color[4];
 
     int i, j;
 
@@ -285,17 +287,25 @@ void ppu_render_scanline_background(struct ppu *p)
         tile_addr += (p->scroll >> 12) & 0x7;
         tile1 = vram_read(p, tile_addr);
         tile2 = vram_read(p, (tile_addr + 8));
+
+        attr_addr =  ((0xC00 & p->scroll) + 0x2300) | 0xC0 | ((p->scroll >> 2) & 0x7) | ((p->scroll >> 4) & 0x38);
+        attr = vram_read(p, attr_addr);
+        palette = attr >> ((((p->scroll >> 5) & 0x2) | ((p->scroll >> 1) & 0x1)) << 1);
+        palette &= 0x3;
+        color[0] = 0;
+        color[1] = color_table[p->vram2[(palette << 2) + 1]];
+        color[2] = color_table[p->vram2[(palette << 2) + 2]];
+        color[3] = color_table[p->vram2[(palette << 2) + 3]];
+
         for (j = 7; j >= 0; j--) {
-            line[7 - j] = color_table[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
+            line[7 - j] = color[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
         }
         line += 8;
-        printf("%x ", 0x2000 | (0xFFF & p->scroll));
         ppu_inc_x(p);
     }
     // Reset x scroll
     p->scroll ^= 0x400;
     ppu_inc_y(p);
-    printf("\n");
 }
 
 void ppu_render_scanline_sprite(struct ppu *p)
@@ -355,7 +365,6 @@ void ppu_render_scanline_sprite(struct ppu *p)
                     line[x + j] = color[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
                     if (i == 0 && !line[x+j] && (p->mask & 0x08)) {
                         // Sprite 0 hit
-                        printf("hit %x %x", p->scanline, line - p->frame);
                         p->status |= 0x40;
                     }
                 }
@@ -364,7 +373,6 @@ void ppu_render_scanline_sprite(struct ppu *p)
                     line[x + 7 - j] = color[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
                     if (i == 0 && !line[x+7-j] && (p->mask & 0x08)) {
                         // Sprite 0 hit
-                        printf("hit %d %d", p->scanline, line - p->frame);
                         p->status |= 0x40;
                     }
                 }
@@ -435,7 +443,6 @@ void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle)
             memset(p->frame, 0, 61440 * sizeof(uint32_t));
             p->odd_frame = !p->odd_frame;
             p->scanline = 0;
-            printf("==================\n");
         }
         p->scanline_cycle = 0;
         p->scanline++;

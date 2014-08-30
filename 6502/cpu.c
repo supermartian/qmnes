@@ -293,7 +293,7 @@ void cpu_run(struct cpu_6502 *p)
         if (p->cycle >= 29658 && p->ppu->ppu_ready == 0) {
             p->ppu->ppu_ready = 1;
         }
-        ppu_run(p->ppu, p, cycle);
+        ppu_run(p->ppu, p, cycle * 3);
         if (p->nmi || p->irq) {
             cpu_handle_intr(p);
         }
@@ -384,7 +384,7 @@ inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
     } else if (addr_ >= 0x8000) {
         ret = p->rom_prg[addr_ & 0x7FFF];
     }
-    //printf("memread %x-%x\n", addr, ret);
+//    printf("memread %x-%x\n", addr, ret);
     return ret;
 }
 
