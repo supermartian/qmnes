@@ -119,7 +119,7 @@ inline uint16_t addr_idiri(struct cpu_6502 *p)
     p->rPC++;
     ret += p->rX;
     ret &= 0xff;
-    ret = mem_read(p, ret) | (mem_read(p, ret + 1) << 8);
+    ret = mem_read(p, ret) | (mem_read(p, 0xff & (ret + 1)) << 8);
     return ret;
 }
 
@@ -382,7 +382,7 @@ inline uint8_t mem_read(struct cpu_6502 *p, uint16_t addr)
     } else if (addr_ == 0x4016) {
         ret = joystick_read(p);
     } else if (addr_ >= 0x8000) {
-        ret = p->rom_prg[addr_ & 0x7FFF];
+        ret = p->rom_prg[addr_ & 0x7FFF - 0x4000];
     }
 //    printf("memread %x-%x\n", addr, ret);
     return ret;

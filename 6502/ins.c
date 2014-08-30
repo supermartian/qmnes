@@ -198,7 +198,7 @@ void ins_table_init()
     INS_ADD(0x9D, AIX_ADDR, sta, 5);
     INS_ADD(0x99, AIY_ADDR, sta, 5);
     INS_ADD(0x81, IDIRI_ADDR, sta, 6);
-    INS_ADD(0x91, IIDIR_ADDR, sta, 6);
+    INS_ADD(0x91, IIDIR_ADDR, sta, 5);
 
     // STX
     INS_ADD(0x86, ZP_ADDR, stx, 3);
