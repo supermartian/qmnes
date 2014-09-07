@@ -107,6 +107,7 @@ void ppu_inc_x(struct ppu *p);
 
 void ppu_render_scanline_background(struct ppu *p);
 void ppu_render_scanline_sprite(struct ppu *p);
+void ppu_render_scanline_background_color(struct ppu *p);
 
 void ppu_setup(struct ppu *p);
 void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle);

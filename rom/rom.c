@@ -46,7 +46,9 @@ void load_rom(struct rom *rom, char *filename)
         rom->rom_mirroring = 2;
     }
 
-    printf("rom size %x, Prog size %x, CHR size %x\n", filesize * sizeof(uint8_t), p[4]*16384, p[5]*8192);
+    rom->mapper = (p[6] >> 4) | (p[7] & 0xF0);
+
+    printf("rom size %x, Prog size %x, CHR size %x, Mapper %d\n", filesize * sizeof(uint8_t), p[4]*16384, p[5]*8192, rom->mapper);
 
     rom->prg_rom_data = rom->rom_start + 16;
     rom->chr_rom_data = rom->prg_rom_data + 16384 * rom->prg_rom_size;

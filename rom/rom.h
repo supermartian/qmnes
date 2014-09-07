@@ -19,6 +19,8 @@ struct rom {
 
     uint8_t *rom_start;
     uint8_t rom_mirroring;
+
+    uint8_t mapper;
     int rom_fd;
 };
 

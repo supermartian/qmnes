@@ -96,8 +96,17 @@ uint16_t vram_addr(struct ppu *p, uint16_t addr)
         ret = vram_addr(p, addr - 0x1000);
     } else if (addr >= 0x3F20 && addr < 0x4000) {
         ret = addr & 0x3F1F;
-    } else {
     }
+
+    switch (ret) {
+        case 0x3F10:case 0x3F14:case 0x3F18:case 0x3F1C:
+            ret -= 0x10;
+            printf("%x \n", ret);
+            break;
+        default:
+            break;
+    }
+
     return ret;
 }
 
@@ -122,6 +131,7 @@ void vram_write(struct ppu *p, uint16_t addr, uint8_t val)
     } else if (a >= 0x2000 && a < 0x3000) {
         p->vram1[a - 0x2000] = val;
     } else if (a >= 0x3F00 && a < 0x3F20) {
+        printf("%x, %x\n", a, val);
         p->vram2[a - 0x3F00] = val;
     } else {
         printf("Impossible write %x %x\n", a, val);
@@ -145,18 +155,18 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
             p->mask = val;
             break;
         case 3:
-            p->oama = val;
+            p->oama = val & 0xFF;
             break;
         case 4:
             p->oam[p->oama] = val;
             break;
         case 5:
             if (!p->w_toggle) {
-                p->scroll = (p->scroll & 0xFFE0) | (vv >> 3);
+                p->scroll = (p->scroll & 0x7FE0) | ((vv & 0xF8) >> 3);
                 p->rX = vv & 0x7;
             } else {
                 p->scroll &= 0x8C1F;
-                p->scroll |= (vv & 0x7) << 12 | (vv & 0xF8) << 2;
+                p->scroll |= ((vv & 0x7) << 12) | ((vv & 0xF8) << 2);
             }
             p->w_toggle ^= 1;
             break;
@@ -165,7 +175,7 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
                 p->scroll &= 0x00FF;
                 p->scroll |= (vv & 0x3F) << 8;
             } else {
-                p->scroll &= 0xFF00;
+                p->scroll &= 0x7F00;
                 p->scroll |= vv;
                 p->addr = p->scroll;
             }
@@ -173,6 +183,7 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
             break;
         case 7:
             vram_write(p, p->addr, val);
+            printf("write %x, %x\n", p->addr, val);
             p->addr += p->vraminc;
             p->addr &= 0x3FFF;
             break;
@@ -187,12 +198,14 @@ uint8_t ppu_read_reg(struct ppu *p, uint16_t addr)
         case 2:
             ret = p->status;
             p->w_toggle = 0;
+            p->status &= 0x7F;
             break;
         case 4:
             ret = p->oam[p->oama];
             break;
         case 7:
             ret = vram_read(p, p->addr);
+            printf("read %x, %x\n", p->addr, ret);
             p->addr += p->vraminc;
             p->addr &= 0x3FFF;
             break;
@@ -230,6 +243,7 @@ void ppu_dma(struct ppu *p, struct cpu_6502 *c, uint8_t val)
     for (i = 0; i < 256; i++) {
         p->oam[p->oama] = mem_read(c, addr);
         p->oama++;
+        p->oama &= 0xFF;
         addr++;
     }
     c->cycle += 256;
@@ -280,6 +294,9 @@ void ppu_render_scanline_background(struct ppu *p)
     int i, j;
 
     line -= p->rX;
+    if (line < p->frame) {
+        line = p->frame;
+    }
     for (i = 0; i < 32; i++) {
         tile_addr = vram_read(p, 0x2000 | (0xFFF & p->scroll));
         tile_addr <<= 4;
@@ -292,7 +309,7 @@ void ppu_render_scanline_background(struct ppu *p)
         attr = vram_read(p, attr_addr);
         palette = attr >> ((((p->scroll >> 5) & 0x2) | ((p->scroll >> 1) & 0x1)) << 1);
         palette &= 0x3;
-        color[0] = 0;
+        color[0] = color_table[vram_read(p, 0x3F00)];
         color[1] = color_table[p->vram2[(palette << 2) + 1]];
         color[2] = color_table[p->vram2[(palette << 2) + 2]];
         color[3] = color_table[p->vram2[(palette << 2) + 3]];
@@ -301,11 +318,13 @@ void ppu_render_scanline_background(struct ppu *p)
             line[7 - j] = color[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
         }
         line += 8;
+        //printf("%x ",  0x2000 | (0xFFF & p->scroll));
         ppu_inc_x(p);
     }
     // Reset x scroll
     p->scroll ^= 0x400;
     ppu_inc_y(p);
+//    printf("\n");
 }
 
 void ppu_render_scanline_sprite(struct ppu *p)
@@ -335,6 +354,7 @@ void ppu_render_scanline_sprite(struct ppu *p)
 
     uint8_t fx, fy;
     uint16_t palette;
+    uint32_t pixel;
 
     for (i = 0 ; i < k ; i++) {
         current_oam = current[i];
@@ -343,40 +363,61 @@ void ppu_render_scanline_sprite(struct ppu *p)
         fy = p->oam[(current_oam<<2) + 2] & 0x80;
 
         palette = p->oam[(current_oam<<2) + 2] & 0x3;
-        color[0] = 0;
+        color[0] = color_table[vram_read(p, 0x3F00)];
         color[1] = color_table[vram_read(p, (palette<<2) + 0x3F11)];
         color[2] = color_table[vram_read(p, (palette<<2) + 0x3F12)];
         color[3] = color_table[vram_read(p, (palette<<2) + 0x3F13)];
         if (p->spritesz) {
             // 8x16
+            tileaddr = p->oam[(current_oam<<2) + 1];
+            tileaddr = ((tileaddr & 0xFE) << 4) | ((tileaddr & 0x1) << 12);
         } else {
             tileaddr = p->oam[(current_oam<<2) + 1];
             tileaddr = (tileaddr << 4);
             tileaddr = p->spritet ? tileaddr | 0x1000 : tileaddr;
-            if (fy) {
-                tileaddr += 8 - (p->scanline - 1 - p->oam[current_oam<<2]);
-            } else {
-                tileaddr += p->scanline - 1 - p->oam[current_oam<<2];
-            }
-            tile1 = vram_read(p, tileaddr);
-            tile2 = vram_read(p, tileaddr + 8);
-            if (fx) {
-                for (j = 7; j >=0; j--){
-                    line[x + j] = color[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
-                    if (i == 0 && !line[x+j] && (p->mask & 0x08)) {
-                        // Sprite 0 hit
-                        p->status |= 0x40;
-                    }
+        }
+
+        if (fy) {
+            tileaddr += p->spritesz ? 16 : 8 - (p->scanline - 1 - p->oam[current_oam<<2]);
+        } else {
+            tileaddr += p->scanline - 1 - p->oam[current_oam<<2];
+        }
+        tile1 = vram_read(p, tileaddr);
+        tile2 = vram_read(p, tileaddr + 8);
+        if (fx) {
+            for (j = 7; j >=0; j--){
+                pixel = color[0x3 & ((tile1 >> j) | ((tile2 >> j) << 1))];
+                if (((p->status & 0x40) != 0x40) && i == 0 && pixel && !line[x+j] && (p->mask & 0x08)) {
+                    // Sprite 0 hit
+                    printf("hit at %d %d\n", p->scanline, x + j );
+                    p->status |= 0x40;
                 }
-            } else {
-                for (j = 7; j >=0; j--){
-                    line[x + 7 - j] = color[0x3 & ((tile1 >> j) | (tile2 >> j << 1))];
-                    if (i == 0 && !line[x+7-j] && (p->mask & 0x08)) {
-                        // Sprite 0 hit
-                        p->status |= 0x40;
-                    }
-                }
+                line[x + j] = pixel == color[0] ? line[x + j] : pixel;
             }
+        } else {
+            for (j = 7; j >=0; j--){
+                pixel = color[0x3 & ((tile1 >> j) | ((tile2 >> j) << 1))];
+                if (((p->status & 0x40) != 0x40) && i == 0 && pixel && !line[x+7-j] && (p->mask & 0x08)) {
+                    // Sprite 0 hit
+                    printf("hit at %d %d\n", p->scanline, x+7-j);
+                    p->status |= 0x40;
+                }
+                line[x + 7 - j] = pixel == color[0] ? line[x + 7 - j] : pixel;
+            }
+        }
+    }
+}
+
+void ppu_render_scanline_background_color(struct ppu *p)
+{
+    uint32_t *line = p->current_scanline_frame;
+    uint32_t color;
+    int i;
+
+    color = color_table[vram_read(p, 0x3F00)];
+    for (i = 0; i <= 256; i++) {
+        if (line[i] == 0) {
+            line[i] = color;
         }
     }
 }
@@ -415,7 +456,7 @@ void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle)
     }
 
     if (p->scanline_cycle == 0 &&
-            p->scanline == 242) {
+            p->scanline == 241) {
         p->status |= 0x80;
         c->nmi = p->vbi;
     }
@@ -425,8 +466,8 @@ void ppu_run(struct ppu *p, struct cpu_6502 *c, uint8_t cycle)
     // We do the actual rendering on the last ppu tick of a scanline
     // Since most of the games don't do the "mid-scanline" rendering, it's just OK
     if (p->scanline_cycle >= max_cycle) {
-
         if (p->scanline == 0) {
+            p->addr = p->scroll;
         } else if (p->scanline < 241 && p->scanline > 0) {
             p->current_scanline_frame = p->frame + (p->scanline - 1) * 256;
             if (p->mask & 0x08) {
