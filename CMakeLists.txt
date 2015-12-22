@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 2.8)
 
 #set(CMAKE_VERBOSE_MAKEFILE true)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${qmnes_SOURCE_DIR}/cmake")
+find_library(AALIB_LIBRARY aa)
 
 IF(APPLE)
 find_library(FOUNDATION Foundation)
@@ -55,6 +56,13 @@ add_executable(qmnes
     ppu/ppu.c
     rom/rom.c)
 
+add_executable(qmnes-aa
+    qmnes-aa.c
+    6502/cpu.c
+    6502/ins.c
+    ppu/ppu.c
+    rom/rom.c)
+
 add_executable(test
     test.c
     6502/cpu.c
@@ -63,6 +71,7 @@ add_executable(test
     rom/rom.c)
 message(STATUS "${CMAKE_CXX_FLAGS}")
 target_link_libraries(qmnes ${SDL2_LIBRARY})
+target_link_libraries(qmnes-aa ${AALIB_LIBRARY})
 
 #cpack stuff goes here
 

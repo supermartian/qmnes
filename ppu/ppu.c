@@ -101,7 +101,7 @@ uint16_t vram_addr(struct ppu *p, uint16_t addr)
     switch (ret) {
         case 0x3F10:case 0x3F14:case 0x3F18:case 0x3F1C:
             ret -= 0x10;
-            printf("%x \n", ret);
+            //printf("%x \n", ret);
             break;
         default:
             break;
@@ -131,7 +131,7 @@ void vram_write(struct ppu *p, uint16_t addr, uint8_t val)
     } else if (a >= 0x2000 && a < 0x3000) {
         p->vram1[a - 0x2000] = val;
     } else if (a >= 0x3F00 && a < 0x3F20) {
-        printf("%x, %x\n", a, val);
+        //printf("%x, %x\n", a, val);
         p->vram2[a - 0x3F00] = val;
     } else {
         printf("Impossible write %x %x\n", a, val);
@@ -183,7 +183,7 @@ void ppu_write_reg(struct ppu *p, uint16_t addr, uint8_t val)
             break;
         case 7:
             vram_write(p, p->addr, val);
-            printf("write %x, %x\n", p->addr, val);
+            //printf("write %x, %x\n", p->addr, val);
             p->addr += p->vraminc;
             p->addr &= 0x3FFF;
             break;
@@ -205,7 +205,7 @@ uint8_t ppu_read_reg(struct ppu *p, uint16_t addr)
             break;
         case 7:
             ret = vram_read(p, p->addr);
-            printf("read %x, %x\n", p->addr, ret);
+            //printf("read %x, %x\n", p->addr, ret);
             p->addr += p->vraminc;
             p->addr &= 0x3FFF;
             break;
@@ -389,7 +389,7 @@ void ppu_render_scanline_sprite(struct ppu *p)
                 pixel = color[0x3 & ((tile1 >> j) | ((tile2 >> j) << 1))];
                 if (((p->status & 0x40) != 0x40) && i == 0 && pixel && !line[x+j] && (p->mask & 0x08)) {
                     // Sprite 0 hit
-                    printf("hit at %d %d\n", p->scanline, x + j );
+                    //printf("hit at %d %d\n", p->scanline, x + j );
                     p->status |= 0x40;
                 }
                 line[x + j] = pixel == color[0] ? line[x + j] : pixel;
@@ -399,7 +399,7 @@ void ppu_render_scanline_sprite(struct ppu *p)
                 pixel = color[0x3 & ((tile1 >> j) | ((tile2 >> j) << 1))];
                 if (((p->status & 0x40) != 0x40) && i == 0 && pixel && !line[x+7-j] && (p->mask & 0x08)) {
                     // Sprite 0 hit
-                    printf("hit at %d %d\n", p->scanline, x+7-j);
+                    //printf("hit at %d %d\n", p->scanline, x+7-j);
                     p->status |= 0x40;
                 }
                 line[x + 7 - j] = pixel == color[0] ? line[x + 7 - j] : pixel;
